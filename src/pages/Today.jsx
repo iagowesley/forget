@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { WORKOUT_PLAN, DAY_ORDER, DAY_LABELS_SHORT, getTodayKey } from '../lib/workoutData'
-import { getDateKey, getSession } from '../lib/storage'
+import { getDateKey, getSession, getWeekCelebrated, setWeekCelebrated } from '../lib/storage'
 import useAuthStore from '../store/authStore'
 import StreakBadge from '../components/progress/StreakBadge'
+import WeekCompleteModal from '../components/WeekCompleteModal'
 import { ChevronRight, Moon, Zap, Calendar } from 'lucide-react'
 
 export default function Today() {
@@ -12,6 +14,7 @@ export default function Today() {
   const todayPlan = WORKOUT_PLAN[todayKey]
   const todayDateKey = getDateKey()
   const todaySession = getSession(todayDateKey)
+  const [showWeekComplete, setShowWeekComplete] = useState(false)
 
   const isRestDay = todayPlan?.type === 'Rest'
 
@@ -34,7 +37,27 @@ export default function Today() {
 
   const completedThisWeek = weeklyProgress.filter(d => d.session?.completed).length
 
+  // Get current week key (year + week number)
+  const getWeekKey = () => {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), 0, 1)
+    const week = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7)
+    return `${now.getFullYear()}_w${week}`
+  }
+
+  useEffect(() => {
+    if (completedThisWeek === 5) {
+      const weekKey = getWeekKey()
+      if (!getWeekCelebrated(weekKey)) {
+        setWeekCelebrated(weekKey)
+        setShowWeekComplete(true)
+      }
+    }
+  }, [completedThisWeek])
+
   return (
+    <>
+    {showWeekComplete && <WeekCompleteModal onClose={() => setShowWeekComplete(false)} />}
     <div style={{ padding: '20px 20px 100px' }}>
       {/* Header greeting */}
       <div style={{ marginBottom: 24 }}>
@@ -273,5 +296,6 @@ export default function Today() {
         </div>
       )}
     </div>
+    </>
   )
 }

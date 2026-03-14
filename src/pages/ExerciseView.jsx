@@ -26,6 +26,7 @@ export default function ExerciseView() {
   const [restDuration, setRestDuration] = useState(exercise?.restSeconds || 60)
   const [showCompletion, setShowCompletion] = useState(false)
   const [mediaIndex, setMediaIndex] = useState(0)
+  const [mediaTab, setMediaTab] = useState('image') // 'image' | 'video'
 
   const { images, video, loading: mediaLoading } = useWgerMedia(exercise?.wgerName)
 
@@ -93,71 +94,94 @@ export default function ExerciseView() {
 
       <div style={{ padding: '0 0 120px' }}>
         {/* Media section */}
-        <div style={{
-          background: 'var(--bg-card)',
-          borderBottom: '1px solid var(--border)',
-          minHeight: 220,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          {mediaLoading ? (
-            <div style={{ color: 'var(--text-disabled)', fontSize: 14 }}>Carregando mídia...</div>
-          ) : images.length > 0 ? (
-            <div style={{ width: '100%', position: 'relative' }}>
-              <img
-                src={images[mediaIndex % images.length]}
-                alt={exercise.name}
+        <div style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
+          {/* Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
+            {['image', 'video'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setMediaTab(tab)}
                 style={{
-                  width: '100%',
-                  height: 220,
-                  objectFit: 'cover',
-                  display: 'block',
+                  flex: 1,
+                  height: 40,
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: `2px solid ${mediaTab === tab ? 'var(--accent)' : 'transparent'}`,
+                  color: mediaTab === tab ? 'var(--accent)' : 'var(--text-secondary)',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
                 }}
-                onError={e => { e.target.style.display = 'none' }}
-              />
-              {images.length > 1 && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: 8,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  display: 'flex',
-                  gap: 6,
-                }}>
-                  {images.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setMediaIndex(i)}
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        background: i === mediaIndex ? 'var(--accent)' : 'rgba(255,255,255,0.4)',
-                        border: 'none',
-                        padding: 0,
-                        cursor: 'pointer',
-                        minHeight: 0,
-                        minWidth: 0,
-                      }}
-                    />
-                  ))}
+              >
+                {tab === 'image' ? 'Imagens' : 'Tutorial'}
+              </button>
+            ))}
+          </div>
+
+          {/* Image tab */}
+          {mediaTab === 'image' && (
+            <div style={{ minHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+              {mediaLoading ? (
+                <div style={{ color: 'var(--text-disabled)', fontSize: 14 }}>Carregando...</div>
+              ) : images.length > 0 ? (
+                <div style={{ width: '100%', position: 'relative' }}>
+                  <img
+                    src={images[mediaIndex % images.length]}
+                    alt={exercise.name}
+                    style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }}
+                    onError={e => { e.target.style.display = 'none' }}
+                  />
+                  {images.length > 1 && (
+                    <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 6 }}>
+                      {images.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setMediaIndex(i)}
+                          style={{
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: i === mediaIndex ? 'var(--accent)' : 'rgba(255,255,255,0.4)',
+                            border: 'none', padding: 0, cursor: 'pointer', minHeight: 0, minWidth: 0,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: 'var(--text-disabled)', padding: 32 }}>
+                  <Image size={48} />
+                  <span style={{ fontSize: 13 }}>Sem imagem disponível</span>
                 </div>
               )}
             </div>
-          ) : (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 12,
-              color: 'var(--text-disabled)',
-              padding: 32,
-            }}>
-              <Image size={48} />
-              <span style={{ fontSize: 13 }}>Sem imagem disponível</span>
+          )}
+
+          {/* Video tab */}
+          {mediaTab === 'video' && (
+            <div style={{ position: 'relative' }}>
+              <iframe
+                src={`https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(exercise.wgerName + ' tutorial form')}&rel=0&modestbranding=1`}
+                title={`${exercise.name} tutorial`}
+                style={{ width: '100%', height: 240, border: 'none', display: 'block' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+              <a
+                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(exercise.wgerName + ' como fazer tutorial')}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'block',
+                  textAlign: 'center',
+                  padding: '8px 0',
+                  fontSize: 12,
+                  color: 'var(--text-secondary)',
+                  textDecoration: 'none',
+                }}
+              >
+                Abrir no YouTube →
+              </a>
             </div>
           )}
         </div>

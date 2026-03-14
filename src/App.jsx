@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import BottomNav from './components/layout/BottomNav'
 import AuthGuard from './components/auth/AuthGuard'
 import useAuthStore from './store/authStore'
+import { initNotifications } from './lib/notifications'
+import { getSettings } from './lib/storage'
 import Today from './pages/Today'
 import DayView from './pages/DayView'
 import ExerciseView from './pages/ExerciseView'
@@ -22,6 +24,7 @@ function AppShell() {
 
   useEffect(() => {
     const unsub = initialize()
+    initNotifications(getSettings())
     return unsub
   }, [])
 

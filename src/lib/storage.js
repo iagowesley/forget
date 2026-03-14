@@ -56,9 +56,19 @@ export function getSettings() {
     restStrength: 90,
     restHypertrophy: 60,
     restResistance: 45,
-    notificationsEnabled: false,
-    notificationTime: '07:00',
+    creatineNotification: false,
+    creatineTime: '08:00',
+    gymNotification: false,
+    gymTime: '17:00',
   })
+}
+
+export function getWeekCelebrated(weekKey) {
+  return getItem(`week_celebrated_${weekKey}`, false)
+}
+
+export function setWeekCelebrated(weekKey) {
+  setItem(`week_celebrated_${weekKey}`, true)
 }
 
 export function saveSettings(settings) {

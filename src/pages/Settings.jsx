@@ -4,7 +4,8 @@ import Header from '../components/layout/Header'
 import useWorkoutStore from '../store/workoutStore'
 import useAuthStore from '../store/authStore'
 import { clearWgerCache } from '../lib/wgerApi'
-import { Clock, Trash2, ChevronRight, LogOut, User, Edit3 } from 'lucide-react'
+import { requestNotificationPermission, scheduleNotification, cancelNotification, hasNotificationSupport } from '../lib/notifications'
+import { Clock, Trash2, ChevronRight, LogOut, User, Edit3, Bell, BellOff } from 'lucide-react'
 
 function OptionRow({ label, children, description }) {
   return (
@@ -61,6 +62,34 @@ export default function Settings() {
   const navigate = useNavigate()
   const [cacheCleared, setCacheCleared] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [notifPermission, setNotifPermission] = useState(
+    hasNotificationSupport() ? Notification.permission : 'denied'
+  )
+
+  const handleToggleNotification = async (type, enabled) => {
+    if (enabled && notifPermission !== 'granted') {
+      const granted = await requestNotificationPermission()
+      if (!granted) return
+      setNotifPermission('granted')
+    }
+    const key = type === 'creatine' ? 'creatineNotification' : 'gymNotification'
+    const timeKey = type === 'creatine' ? 'creatineTime' : 'gymTime'
+    updateSettings({ [key]: enabled })
+    if (enabled) {
+      scheduleNotification(type, settings[timeKey])
+    } else {
+      cancelNotification(type)
+    }
+  }
+
+  const handleTimeChange = (type, time) => {
+    const key = type === 'creatine' ? 'creatineTime' : 'gymTime'
+    const enabledKey = type === 'creatine' ? 'creatineNotification' : 'gymNotification'
+    updateSettings({ [key]: time })
+    if (settings[enabledKey]) {
+      scheduleNotification(type, time)
+    }
+  }
 
   const handleClearCache = () => {
     clearWgerCache()
@@ -206,6 +235,138 @@ export default function Settings() {
             />
           </OptionRow>
         </div>
+
+        {/* Notifications section */}
+        {hasNotificationSupport() && (
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 16,
+            padding: '0 16px',
+            marginBottom: 20,
+          }}>
+            <div style={{ padding: '14px 0 10px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                <Bell size={16} color="var(--accent)" />
+                <span style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                }}>
+                  Lembretes
+                </span>
+              </div>
+              {notifPermission === 'denied' && (
+                <p style={{ fontSize: 12, color: 'var(--warning)', marginTop: 6 }}>
+                  Ative as notificações no navegador para usar lembretes.
+                </p>
+              )}
+            </div>
+
+            {/* Creatine */}
+            <OptionRow
+              label="💊 Lembrete de creatina"
+              description="Lembrete diário para tomar 5g de creatina"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {settings.creatineNotification && (
+                  <input
+                    type="time"
+                    value={settings.creatineTime}
+                    onChange={e => handleTimeChange('creatine', e.target.value)}
+                    style={{
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      padding: '6px 8px',
+                      color: 'var(--text-primary)',
+                      fontSize: 14,
+                      fontFamily: 'var(--font-display)',
+                    }}
+                  />
+                )}
+                <button
+                  onClick={() => handleToggleNotification('creatine', !settings.creatineNotification)}
+                  style={{
+                    width: 48,
+                    height: 28,
+                    borderRadius: 999,
+                    background: settings.creatineNotification ? 'var(--accent)' : 'var(--bg-surface)',
+                    border: `1px solid ${settings.creatineNotification ? 'var(--accent)' : 'var(--border)'}`,
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'all 0.2s',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: settings.creatineNotification ? '#000' : 'var(--text-disabled)',
+                    position: 'absolute',
+                    top: 3,
+                    left: settings.creatineNotification ? 24 : 3,
+                    transition: 'all 0.2s',
+                  }} />
+                </button>
+              </div>
+            </OptionRow>
+
+            {/* Gym */}
+            <OptionRow
+              label="🏋️ Lembrete da academia"
+              description="Mensagem motivacional para ir treinar"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {settings.gymNotification && (
+                  <input
+                    type="time"
+                    value={settings.gymTime}
+                    onChange={e => handleTimeChange('gym', e.target.value)}
+                    style={{
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      padding: '6px 8px',
+                      color: 'var(--text-primary)',
+                      fontSize: 14,
+                      fontFamily: 'var(--font-display)',
+                    }}
+                  />
+                )}
+                <button
+                  onClick={() => handleToggleNotification('gym', !settings.gymNotification)}
+                  style={{
+                    width: 48,
+                    height: 28,
+                    borderRadius: 999,
+                    background: settings.gymNotification ? 'var(--accent)' : 'var(--bg-surface)',
+                    border: `1px solid ${settings.gymNotification ? 'var(--accent)' : 'var(--border)'}`,
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'all 0.2s',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    background: settings.gymNotification ? '#000' : 'var(--text-disabled)',
+                    position: 'absolute',
+                    top: 3,
+                    left: settings.gymNotification ? 24 : 3,
+                    transition: 'all 0.2s',
+                  }} />
+                </button>
+              </div>
+            </OptionRow>
+          </div>
+        )}
 
         {/* Cache section */}
         <div style={{
