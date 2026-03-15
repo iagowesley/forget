@@ -45,62 +45,29 @@ exports.handler = async (event) => {
       ? 'Treino feminino com foco em glúteo, posterior e quadríceps (inferior 3x semana + superiores 2x)'
       : 'Treino PPL — Push/Pull/Legs (5x semana, hipertrofia e força)'
 
-    const prompt = `Você é um nutricionista esportivo especializado. Gere um plano alimentar semanal COMPLETO e DETALHADO em português brasileiro para a pessoa abaixo.
+    const prompt = `Você é nutricionista esportivo. Crie um plano alimentar em português para:
 
-DADOS DO USUÁRIO:
-- Nome: ${username || 'Usuário'}
-- Sexo: ${genderLabel}
-- Peso: ${weight_kg}kg
-- Altura: ${height_cm}cm
-${age ? `- Idade: ${age} anos` : ''}
-${bmi ? `- IMC: ${bmi}` : ''}
-- Nível de treino: ${expLabel}
-- Modalidade: ${trainFocus}
+- ${genderLabel}, ${weight_kg}kg, ${height_cm}cm${age ? `, ${age} anos` : ''}${bmi ? `, IMC ${bmi}` : ''}
+- Nível: ${expLabel} | ${trainFocus}
 - Objetivo(s): ${goalsLabels}
+${isMultiGoal ? `\n${goalsContext}\n\nEquilibre o plano entre todos os objetivos.` : ''}
 
-${isMultiGoal ? `CONTEXTO DOS OBJETIVOS COMBINADOS:
-${goalsContext}
+## 📊 MACROS DIÁRIOS
+Calorias, proteínas (g), carboidratos (g), gorduras (g), água (L).${isMultiGoal ? ' Variação treino vs descanso.' : ''}
 
-⚠️ O plano deve ser EQUILIBRADO entre todos os objetivos acima, priorizando estratégias que beneficiam múltiplos objetivos simultaneamente (ex: alta proteína, ciclagem de carboidratos, refeições pré/pós treino otimizadas).` : `CONTEXTO DO OBJETIVO:
-${goalsContext}`}
+## 🍽️ CARDÁPIO (3 dias modelo: Treino A, Treino B, Descanso)
+Para cada dia: café da manhã, almoço, lanche, jantar (com quantidades em gramas).
 
-GERE O SEGUINTE (seja ESPECÍFICO com gramas e porções):
+## ✅ TOP 8 ALIMENTOS para o objetivo
+## ❌ TOP 5 ALIMENTOS A EVITAR
 
-## 📊 CÁLCULO DE MACROS DIÁRIOS
-- Calorias totais (justifique com base nos objetivos)
-- Proteínas (g e % das calorias)
-- Carboidratos (g e % das calorias)
-- Gorduras (g e % das calorias)
-- Água (litros/dia)
-${isMultiGoal ? '- Variação nos dias de treino vs. descanso (se aplicável para os objetivos)' : ''}
+## ⏰ TIMING: pré-treino e pós-treino ideais
 
-## 🍽️ CARDÁPIO SEMANAL (Segunda a Domingo)
-Para cada dia da semana, escreva:
-**[Dia da semana]** (Dia de treino / Descanso)
-- ☀️ Café da manhã (com quantidades)
-- 🥗 Almoço (com quantidades)
-- 🍎 Lanche da tarde (com quantidades)
-- 🌙 Jantar (com quantidades)
-- 🌛 Ceia opcional (se necessário)
+## 💊 SUPLEMENTOS com dosagem
 
-## ✅ ALIMENTOS PRIORIDADE
-Liste os 10 melhores alimentos para ${isMultiGoal ? 'esses objetivos combinados' : 'o objetivo'}.
+## 💡 3 DICAS PRÁTICAS
 
-## ❌ ALIMENTOS A EVITAR
-Liste os 5 alimentos que prejudicam ${isMultiGoal ? 'esses objetivos' : 'o objetivo'}.
-
-## ⏰ TIMING DE REFEIÇÕES
-- Horário ideal das refeições
-- O que comer pré-treino (1h antes)
-- O que comer pós-treino (até 30min depois)
-
-## 💊 SUPLEMENTAÇÃO SUGERIDA
-Liste suplementos relevantes com dosagem.
-
-## 💡 DICAS IMPORTANTES
-3-4 dicas específicas para ${isMultiGoal ? 'os objetivos combinados' : 'o objetivo'}.
-
-Formate tudo de forma clara, use emojis para organização e seja prático e direto.`
+Seja direto, use emojis, especifique gramas/porções.`
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -110,8 +77,8 @@ Formate tudo de forma clara, use emojis para organização e seja prático e dir
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 3000,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }],
       }),
     })
