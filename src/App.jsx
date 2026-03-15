@@ -54,6 +54,7 @@ function AppShell() {
       flexDirection: 'column',
       minHeight: '100vh',
       background: 'var(--bg-primary)',
+      paddingBottom: hideNav ? 0 : 'calc(88px + env(safe-area-inset-bottom, 0px))',
     }}>
       <AuthGuard />
       <Routes>
