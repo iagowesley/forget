@@ -147,3 +147,23 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT 'male';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS diet_plan TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS diet_goal TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS diet_generated_at TIMESTAMPTZ;
+
+-- =============================================
+-- Migração: histórico de peso corporal
+-- =============================================
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS weight_history JSONB DEFAULT '[]';
+
+-- =============================================
+-- Migração: constraint única para upsert de séries
+-- Necessário para sincronização cross-device
+-- =============================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'uq_sets_session_exercise_set'
+  ) THEN
+    ALTER TABLE exercise_sets
+      ADD CONSTRAINT uq_sets_session_exercise_set
+      UNIQUE (session_id, exercise_id, set_number);
+  END IF;
+END $$;

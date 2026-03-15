@@ -1,5 +1,30 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { loadAllSessions, loadStreak, loadWeightHistory } from '../lib/db'
+import { saveSession, setItem } from '../lib/storage'
+
+async function syncFromCloud(userId) {
+  try {
+    const [sessions, streak, weightHistory] = await Promise.all([
+      loadAllSessions(userId, 90),
+      loadStreak(userId),
+      loadWeightHistory(userId),
+    ])
+
+    // Populate localStorage with Supabase data
+    for (const session of sessions) {
+      saveSession(session.dateKey, session)
+    }
+    if (streak) {
+      setItem('streak', streak)
+    }
+    if (weightHistory && weightHistory.length > 0) {
+      setItem('weight_history', weightHistory)
+    }
+  } catch (err) {
+    console.error('[authStore] syncFromCloud:', err)
+  }
+}
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -8,18 +33,23 @@ const useAuthStore = create((set, get) => ({
 
   initialize: () => {
     // Check existing session first
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const user = session?.user ?? null
-      set({ user, loading: false })
-      if (user) get().loadProfile(user.id)
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       const user = session?.user ?? null
       set({ user })
       if (user) {
-        get().loadProfile(user.id)
+        await get().loadProfile(user.id)
+        await syncFromCloud(user.id)
+      }
+      set({ loading: false })
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user ?? null
+      set({ user })
+      if (user) {
+        await get().loadProfile(user.id)
+        syncFromCloud(user.id) // fire and forget after initial login
       } else {
         set({ profile: null })
       }

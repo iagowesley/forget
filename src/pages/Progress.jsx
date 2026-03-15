@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import Header from '../components/layout/Header'
 import ProgressChart from '../components/progress/ProgressChart'
 import { getHistory, getStreak, getWeightHistory, logBodyWeight, getDateKey } from '../lib/storage'
+import { syncWeightHistory } from '../lib/db'
+import useAuthStore from '../store/authStore'
 import { TrendingUp, Flame, Target, Activity, ChevronDown, ChevronUp, Award, Scale } from 'lucide-react'
 
 function buildExerciseProgress(history) {
@@ -247,6 +249,7 @@ function ExerciseDetail({ exercise }) {
 
 function WeightTracker() {
   const today = getDateKey()
+  const { user } = useAuthStore()
   const [weightHistory, setWeightHistory] = useState(() => getWeightHistory())
   const [inputVal, setInputVal] = useState(() => {
     const h = getWeightHistory()
@@ -258,7 +261,9 @@ function WeightTracker() {
     const w = parseFloat(inputVal)
     if (!w || w < 20 || w > 500) return
     logBodyWeight(today, w)
-    setWeightHistory(getWeightHistory())
+    const newHistory = getWeightHistory()
+    setWeightHistory(newHistory)
+    if (user?.id) syncWeightHistory(user.id, newHistory).catch(console.error)
   }
 
   const recent = [...weightHistory].slice(-10).reverse()

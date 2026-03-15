@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 import { getSession, saveSession, getDateKey, getSettings, saveSettings, updateStreak } from '../lib/storage'
+import { syncSession, syncStreak } from '../lib/db'
+import useAuthStore from './authStore'
+
+function getUserId() {
+  return useAuthStore.getState().user?.id ?? null
+}
 
 const useWorkoutStore = create((set, get) => ({
   // Active session
@@ -44,6 +50,9 @@ const useWorkoutStore = create((set, get) => ({
     const updated = { ...currentSession, startedAt: new Date().toISOString() }
     saveSession(dateKey, updated)
     set({ currentSession: updated })
+
+    const userId = getUserId()
+    if (userId) syncSession(userId, updated).catch(console.error)
   },
 
   completeSet: (dateKey, exerciseId, setNumber, data = {}) => {
@@ -73,11 +82,16 @@ const useWorkoutStore = create((set, get) => ({
     if (allDone && !updated.finishedAt) {
       updated.finishedAt = new Date().toISOString()
       updated.completed = true
-      updateStreak(dateKey)
+      const newStreak = updateStreak(dateKey)
+      const userId = getUserId()
+      if (userId) syncStreak(userId, newStreak).catch(console.error)
     }
 
     saveSession(dateKey, updated)
     set({ currentSession: updated })
+
+    const userId = getUserId()
+    if (userId) syncSession(userId, updated).catch(console.error)
   },
 
   uncompleteSet: (dateKey, exerciseId, setNumber) => {
@@ -100,6 +114,9 @@ const useWorkoutStore = create((set, get) => ({
 
     saveSession(dateKey, updated)
     set({ currentSession: updated })
+
+    const userId = getUserId()
+    if (userId) syncSession(userId, updated).catch(console.error)
   },
 
   updateSetData: (dateKey, exerciseId, setNumber, data) => {
