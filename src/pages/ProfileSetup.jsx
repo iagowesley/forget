@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { User, Scale, Ruler, Trophy, ChevronRight, Zap, Check } from 'lucide-react'
 import useAuthStore from '../store/authStore'
-import { generateStartingWeights, PREVIEW_EXERCISES, getUnitLabel } from '../lib/workoutGenerator'
+import { generateStartingWeights, getPreviewExercises, getUnitLabel } from '../lib/workoutGenerator'
 
 const EXPERIENCE_OPTIONS = [
   {
@@ -44,12 +44,28 @@ function calcAge(birthYear) {
   return new Date().getFullYear() - birthYear
 }
 
+const GENDER_OPTIONS = [
+  {
+    id: 'male',
+    label: 'Masculino',
+    desc: 'Plano PPL — Push, Pull, Legs',
+    emoji: '♂️',
+  },
+  {
+    id: 'female',
+    label: 'Feminino',
+    desc: 'Foco em inferior — Glúteo, Posterior e Quadríceps',
+    emoji: '♀️',
+  },
+]
+
 export default function ProfileSetup() {
   const { saveProfile, user } = useAuthStore()
   const [name, setName] = useState('')
   const [weight, setWeight] = useState('')
   const [height, setHeight] = useState('')
   const [birthYear, setBirthYear] = useState('')
+  const [gender, setGender] = useState('male')
   const [experience, setExperience] = useState('intermediate')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -57,6 +73,8 @@ export default function ProfileSetup() {
   const bmi = useMemo(() => calcBMI(parseFloat(weight), parseFloat(height)), [weight, height])
   const bmiInfo = bmiLabel(bmi)
   const age = calcAge(parseInt(birthYear))
+
+  const previewExercises = useMemo(() => getPreviewExercises(gender), [gender])
 
   const weights = useMemo(() => {
     const w = parseFloat(weight)
@@ -78,6 +96,7 @@ export default function ProfileSetup() {
         weight_kg: parseFloat(weight),
         height_cm: parseInt(height),
         birth_year: birthYear ? parseInt(birthYear) : null,
+        gender,
         experience,
         starting_weights: weights || {},
         profile_completed: true,
@@ -149,7 +168,56 @@ export default function ProfileSetup() {
           />
         </section>
 
-        {/* Seção 2: Dados físicos */}
+        {/* Seção 2: Sexo */}
+        <section>
+          <SectionTitle icon={<User size={15} />} title="Sexo" />
+          <div style={{ display: 'flex', gap: 10 }}>
+            {GENDER_OPTIONS.map(opt => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setGender(opt.id)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '16px 12px',
+                  background: gender === opt.id ? 'rgba(200, 255, 0, 0.08)' : 'var(--bg-card)',
+                  border: `1.5px solid ${gender === opt.id ? 'var(--accent)' : 'var(--border)'}`,
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span style={{ fontSize: 28 }}>{opt.emoji}</span>
+                <div>
+                  <div style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: gender === opt.id ? 'var(--accent)' : 'var(--text-primary)',
+                    marginBottom: 2,
+                  }}>
+                    {opt.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{opt.desc}</div>
+                </div>
+                {gender === opt.id && (
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', background: 'var(--accent)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Check size={12} color="#000" strokeWidth={3} />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Seção 3: Dados físicos */}
         <section>
           <SectionTitle icon={<Scale size={15} />} title="Dados físicos" />
           <div style={{ display: 'flex', gap: 12 }}>
@@ -229,7 +297,7 @@ export default function ProfileSetup() {
           )}
         </section>
 
-        {/* Seção 3: Experiência */}
+        {/* Seção 4: Experiência */}
         <section>
           <SectionTitle icon={<Trophy size={15} />} title="Nível de experiência" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -299,7 +367,7 @@ export default function ProfileSetup() {
                   Calculado com base no seu peso corporal ({weight}kg) e nível {EXPERIENCE_OPTIONS.find(o => o.id === experience)?.label}. Ajuste conforme necessário.
                 </p>
               </div>
-              {PREVIEW_EXERCISES.map((ex, i) => {
+              {previewExercises.map((ex, i) => {
                 const w = weights[ex.id]
                 const unit = getUnitLabel(ex.id)
                 return (
@@ -310,7 +378,7 @@ export default function ProfileSetup() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '12px 16px',
-                      borderBottom: i < PREVIEW_EXERCISES.length - 1 ? '1px solid var(--border)' : 'none',
+                      borderBottom: i < previewExercises.length - 1 ? '1px solid var(--border)' : 'none',
                     }}
                   >
                     <span style={{ fontSize: 14, color: 'var(--text-primary)' }}>{ex.name}</span>

@@ -21,9 +21,12 @@ export function removeItem(key) {
   localStorage.removeItem(PREFIX + key)
 }
 
-// Session key format: YYYY-MM-DD
+// Session key format: YYYY-MM-DD (local time, not UTC)
 export function getDateKey(date = new Date()) {
-  return date.toISOString().split('T')[0]
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 // Get or create session for today
@@ -78,6 +81,23 @@ export function saveSettings(settings) {
 // Streak calculation
 export function getStreak() {
   return getItem('streak', { current: 0, longest: 0, lastTrainingDate: null })
+}
+
+// Body weight history
+export function getWeightHistory() {
+  return getItem('weight_history', [])
+}
+
+export function logBodyWeight(dateKey, weightKg) {
+  const history = getWeightHistory()
+  const idx = history.findIndex(e => e.date === dateKey)
+  if (idx >= 0) {
+    history[idx].weight = weightKg
+  } else {
+    history.push({ date: dateKey, weight: weightKg })
+  }
+  history.sort((a, b) => a.date.localeCompare(b.date))
+  setItem('weight_history', history.slice(-365))
 }
 
 export function updateStreak(dateKey) {

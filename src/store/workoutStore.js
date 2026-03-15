@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { getSession, saveSession, getDateKey, getSettings, saveSettings, updateStreak } from '../lib/storage'
-import { WORKOUT_PLAN, getTodayKey } from '../lib/workoutData'
 
 const useWorkoutStore = create((set, get) => ({
   // Active session
@@ -8,8 +7,7 @@ const useWorkoutStore = create((set, get) => ({
   settings: getSettings(),
 
   // Initialize or load session for a given day
-  initSession: (dayKey, dateKey) => {
-    const dayPlan = WORKOUT_PLAN[dayKey]
+  initSession: (dayKey, dateKey, dayPlan) => {
     if (!dayPlan || dayPlan.type === 'Rest') return
 
     let session = getSession(dateKey)

@@ -1,8 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { WORKOUT_PLAN } from '../lib/workoutData'
+import { getWorkoutPlan } from '../lib/workoutData'
 import { getDateKey } from '../lib/storage'
 import useWorkoutStore from '../store/workoutStore'
+import useAuthStore from '../store/authStore'
 import ExerciseCard from '../components/workout/ExerciseCard'
 import Header from '../components/layout/Header'
 import { Zap, Moon } from 'lucide-react'
@@ -10,7 +11,9 @@ import { Zap, Moon } from 'lucide-react'
 export default function DayView() {
   const { dayName } = useParams()
   const navigate = useNavigate()
-  const dayPlan = WORKOUT_PLAN[dayName]
+  const { profile } = useAuthStore()
+  const workoutPlan = getWorkoutPlan(profile?.gender)
+  const dayPlan = workoutPlan[dayName]
 
   const { currentSession, initSession, startSession } = useWorkoutStore()
 
@@ -27,7 +30,7 @@ export default function DayView() {
 
   useEffect(() => {
     if (dayPlan && dayPlan.type !== 'Rest') {
-      initSession(dayName, dateKey)
+      initSession(dayName, dateKey, dayPlan)
     }
   }, [dayName, dateKey])
 

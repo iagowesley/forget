@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   weight_kg NUMERIC(5,1),
   height_cm SMALLINT,
   birth_year SMALLINT,
+  gender TEXT DEFAULT 'male',
   experience TEXT DEFAULT 'intermediate',
   profile_completed BOOLEAN DEFAULT FALSE,
   starting_weights JSONB DEFAULT '{}',
@@ -134,3 +135,8 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- =============================================
+-- Migração: adicionar coluna gender (rodar se tabela já existe)
+-- =============================================
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT 'male';

@@ -2,7 +2,8 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/layout/Header'
 import { getHistory } from '../lib/storage'
-import { WORKOUT_PLAN } from '../lib/workoutData'
+import { getWorkoutPlan } from '../lib/workoutData'
+import useAuthStore from '../store/authStore'
 import { Calendar, CheckCircle, BarChart2 } from 'lucide-react'
 
 function formatDate(dateKey) {
@@ -12,6 +13,8 @@ function formatDate(dateKey) {
 
 export default function History() {
   const navigate = useNavigate()
+  const { profile } = useAuthStore()
+  const workoutPlan = getWorkoutPlan(profile?.gender)
   const history = useMemo(() => getHistory(30), [])
 
   const completedCount = history.filter(h => h.session?.completed).length
@@ -90,7 +93,7 @@ export default function History() {
         {/* History list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {history.map(({ dateKey, session }) => {
-            const dayPlan = WORKOUT_PLAN[session?.dayKey]
+            const dayPlan = workoutPlan[session?.dayKey]
             const completedSets = (session?.exercises || [])
               .reduce((a, ex) => a + ex.sets.filter(s => s.completed).length, 0)
             const totalSets = (session?.exercises || [])

@@ -1,7 +1,8 @@
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState, useRef } from 'react'
-import { WORKOUT_PLAN, getIntensityColor } from '../lib/workoutData'
+import { getWorkoutPlan, getIntensityColor } from '../lib/workoutData'
 import useWorkoutStore from '../store/workoutStore'
+import useAuthStore from '../store/authStore'
 import { useWgerMedia } from '../hooks/useWgerMedia'
 import { useTimer } from '../hooks/useTimer'
 import Header from '../components/layout/Header'
@@ -17,7 +18,8 @@ export default function ExerciseView() {
   const dayKey = searchParams.get('day')
   const dateKey = searchParams.get('date')
 
-  const dayPlan = WORKOUT_PLAN[dayKey]
+  const { profile } = useAuthStore()
+  const dayPlan = getWorkoutPlan(profile?.gender)[dayKey]
   const exercise = dayPlan?.exercises.find(ex => ex.id === id)
 
   const { currentSession, completeSet, uncompleteSet, initSession } = useWorkoutStore()
@@ -33,8 +35,8 @@ export default function ExerciseView() {
   const timer = useTimer(restDuration)
 
   useEffect(() => {
-    if (dayKey && dateKey && !currentSession) {
-      initSession(dayKey, dateKey)
+    if (dayKey && dateKey && dayPlan && !currentSession) {
+      initSession(dayKey, dateKey, dayPlan)
     }
   }, [dayKey, dateKey])
 
@@ -78,6 +80,11 @@ export default function ExerciseView() {
     ?.slice(-1)[0]?.weightKg
 
   const allSets = exerciseSession?.sets || []
+
+  // Progressive overload: all sets completed at or above max reps
+  const showOverloadHint = exerciseSession?.completed && allSets.every(s =>
+    s.completed && s.actualReps != null && s.actualReps >= exercise.repsMax
+  )
   const allMedia = [...images]
   if (video) allMedia.push(video)
 
@@ -295,6 +302,24 @@ export default function ExerciseView() {
           )}
 
           {/* Sets */}
+          {showOverloadHint && (
+            <div style={{
+              background: 'rgba(200,255,0,0.08)',
+              border: '1px solid rgba(200,255,0,0.3)',
+              borderRadius: 10,
+              padding: '10px 14px',
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}>
+              <span style={{ fontSize: 18 }}>📈</span>
+              <span style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600 }}>
+                Ótimo desempenho! Tente aumentar +2,5kg na próxima sessão.
+              </span>
+            </div>
+          )}
+
           <h3 style={{
             fontFamily: 'var(--font-display)',
             fontSize: 16,

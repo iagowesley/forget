@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { WORKOUT_PLAN, DAY_ORDER, DAY_LABELS_SHORT, getTodayKey } from '../lib/workoutData'
+import { getWorkoutPlan, DAY_ORDER, DAY_LABELS_SHORT, getTodayKey } from '../lib/workoutData'
 import { getDateKey, getSession, getWeekCelebrated, setWeekCelebrated } from '../lib/storage'
 import useAuthStore from '../store/authStore'
 import StreakBadge from '../components/progress/StreakBadge'
@@ -10,8 +10,9 @@ import { ChevronRight, Moon, Zap, Calendar } from 'lucide-react'
 export default function Today() {
   const navigate = useNavigate()
   const { profile } = useAuthStore()
+  const workoutPlan = getWorkoutPlan(profile?.gender)
   const todayKey = getTodayKey()
-  const todayPlan = WORKOUT_PLAN[todayKey]
+  const todayPlan = workoutPlan[todayKey]
   const todayDateKey = getDateKey()
   const todaySession = getSession(todayDateKey)
   const [showWeekComplete, setShowWeekComplete] = useState(false)
@@ -20,7 +21,7 @@ export default function Today() {
 
   // Weekly overview
   const weeklyProgress = DAY_ORDER.slice(0, 5).map(dayKey => {
-    const plan = WORKOUT_PLAN[dayKey]
+    const plan = workoutPlan[dayKey]
     // Get date for this week
     const today = new Date()
     const dayOfWeek = today.getDay() // 0 = sunday

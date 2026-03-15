@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import Header from '../components/layout/Header'
 import ProgressChart from '../components/progress/ProgressChart'
-import { getHistory, getStreak } from '../lib/storage'
-import { TrendingUp, Flame, Target, Activity, ChevronDown, ChevronUp, Award } from 'lucide-react'
+import { getHistory, getStreak, getWeightHistory, logBodyWeight, getDateKey } from '../lib/storage'
+import { TrendingUp, Flame, Target, Activity, ChevronDown, ChevronUp, Award, Scale } from 'lucide-react'
 
 function buildExerciseProgress(history) {
   const exerciseData = {}
@@ -245,6 +245,109 @@ function ExerciseDetail({ exercise }) {
   )
 }
 
+function WeightTracker() {
+  const today = getDateKey()
+  const [weightHistory, setWeightHistory] = useState(() => getWeightHistory())
+  const [inputVal, setInputVal] = useState(() => {
+    const h = getWeightHistory()
+    const todayEntry = h.find(e => e.date === today)
+    return todayEntry ? String(todayEntry.weight) : ''
+  })
+
+  const handleLog = () => {
+    const w = parseFloat(inputVal)
+    if (!w || w < 20 || w > 500) return
+    logBodyWeight(today, w)
+    setWeightHistory(getWeightHistory())
+  }
+
+  const recent = [...weightHistory].slice(-10).reverse()
+  const first = weightHistory[0]
+  const last = weightHistory[weightHistory.length - 1]
+  const diff = (first && last && first !== last) ? (last.weight - first.weight).toFixed(1) : null
+
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 16,
+      padding: '16px 20px',
+      marginBottom: 20,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <Scale size={16} color="var(--accent)" />
+        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          Peso Corporal
+        </h3>
+        {diff !== null && (
+          <span style={{
+            marginLeft: 'auto', fontSize: 12, fontWeight: 700,
+            color: parseFloat(diff) > 0 ? '#F59E0B' : 'var(--success)',
+          }}>
+            {parseFloat(diff) > 0 ? '+' : ''}{diff}kg total
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={inputVal}
+          onChange={e => setInputVal(e.target.value)}
+          placeholder="Seu peso hoje (kg)"
+          style={{
+            flex: 1, height: 44, background: 'var(--bg-surface)',
+            border: '1px solid var(--border)', borderRadius: 10,
+            color: 'var(--text-primary)', fontSize: 15, padding: '0 14px',
+            outline: 'none', fontFamily: 'var(--font-body)',
+          }}
+          onFocus={e => { e.target.style.borderColor = 'var(--accent)' }}
+          onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
+        />
+        <button
+          onClick={handleLog}
+          style={{
+            height: 44, padding: '0 18px', borderRadius: 10,
+            background: 'var(--accent)', border: 'none', color: '#000',
+            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          Registrar
+        </button>
+      </div>
+      {recent.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {recent.map((entry, i) => {
+            const prev = recent[i + 1]
+            const delta = prev ? (entry.weight - prev.weight).toFixed(1) : null
+            return (
+              <div key={entry.date} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '6px 10px', background: i === 0 ? 'rgba(200,255,0,0.06)' : 'var(--bg-surface)',
+                borderRadius: 8,
+              }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {new Date(entry.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {delta !== null && delta !== '0.0' && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: parseFloat(delta) > 0 ? '#F59E0B' : 'var(--success)' }}>
+                      {parseFloat(delta) > 0 ? '+' : ''}{delta}
+                    </span>
+                  )}
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: i === 0 ? 'var(--accent)' : 'var(--text-primary)' }}>
+                    {entry.weight}kg
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Progress() {
   const history = useMemo(() => getHistory(90), [])
   const streak = getStreak()
@@ -346,6 +449,8 @@ export default function Progress() {
                 </div>
               </div>
             )}
+
+            <WeightTracker />
 
             <div style={{
               background: 'var(--bg-card)',
