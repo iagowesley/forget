@@ -1,12 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getWorkoutPlan } from '../lib/workoutData'
 import { getDateKey } from '../lib/storage'
 import useWorkoutStore from '../store/workoutStore'
 import useAuthStore from '../store/authStore'
 import ExerciseCard from '../components/workout/ExerciseCard'
 import Header from '../components/layout/Header'
-import { Zap, Moon } from 'lucide-react'
+import { Zap, Moon, Timer, CheckCircle2 } from 'lucide-react'
 
 export default function DayView() {
   const { dayName } = useParams()
@@ -55,6 +55,25 @@ export default function DayView() {
 
   const completedExercises = currentSession?.exercises?.filter(e => e.completed).length || 0
   const totalExercises = dayPlan.exercises.length
+
+  // Live elapsed timer
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    if (!currentSession?.startedAt || currentSession?.completed) return
+    const start = new Date(currentSession.startedAt)
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [currentSession?.startedAt, currentSession?.completed])
+
+  const formatElapsed = (s) => {
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const sec = s % 60
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+  }
 
   const handleStart = () => {
     startSession(dateKey)
@@ -120,6 +139,64 @@ export default function DayView() {
               borderRadius: 999,
               transition: 'width 0.4s ease',
             }} />
+          </div>
+        )}
+
+        {/* In-progress banner */}
+        {currentSession?.startedAt && !currentSession?.completed && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 16px',
+            background: 'rgba(200,255,0,0.08)',
+            border: '1px solid rgba(200,255,0,0.25)',
+            borderRadius: 12,
+            marginBottom: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: 'var(--accent)',
+                animation: 'pulse-dot 1.5s ease-in-out infinite',
+              }} />
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
+                Em andamento
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                · {completedExercises}/{totalExercises} exercícios
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Timer size={14} color="var(--text-secondary)" />
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                {formatElapsed(elapsed)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Completed banner */}
+        {currentSession?.completed && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '12px 16px',
+            background: 'rgba(34,197,94,0.08)',
+            border: '1px solid rgba(34,197,94,0.25)',
+            borderRadius: 12,
+            marginBottom: 16,
+          }}>
+            <CheckCircle2 size={18} color="var(--success)" />
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--success)' }}>
+              Treino concluído!
+            </span>
+            {currentSession.finishedAt && currentSession.startedAt && (
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 'auto' }}>
+                {Math.round((new Date(currentSession.finishedAt) - new Date(currentSession.startedAt)) / 60000)} min
+              </span>
+            )}
           </div>
         )}
 

@@ -1,5 +1,9 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Star, Flame, RefreshCw } from 'lucide-react'
+import { Star, Flame, RefreshCw, FileText } from 'lucide-react'
+import WeekReport from './WeekReport'
+import useAuthStore from '../store/authStore'
+import { getWorkoutPlan } from '../lib/workoutData'
 
 const MESSAGES = [
   'Semana DESTRUÍDA! Você é imparável! 🔥',
@@ -45,7 +49,20 @@ function Confetti() {
 
 export default function WeekCompleteModal({ onClose }) {
   const navigate = useNavigate()
+  const { profile } = useAuthStore()
+  const [showReport, setShowReport] = useState(false)
   const message = MESSAGES[Math.floor(Math.random() * MESSAGES.length)]
+  const workoutPlan = getWorkoutPlan(profile?.gender)
+
+  if (showReport) {
+    return (
+      <WeekReport
+        onClose={() => setShowReport(false)}
+        workoutPlan={workoutPlan}
+        profile={profile}
+      />
+    )
+  }
 
   return (
     <div style={{
@@ -142,13 +159,13 @@ export default function WeekCompleteModal({ onClose }) {
         </button>
 
         <button
-          onClick={() => { navigate('/history'); onClose() }}
+          onClick={() => setShowReport(true)}
           style={{
             height: 52,
             borderRadius: 14,
             background: 'var(--bg-surface)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-primary)',
+            border: '1px solid rgba(200,255,0,0.3)',
+            color: 'var(--accent)',
             cursor: 'pointer',
             fontFamily: 'var(--font-display)',
             fontSize: 15,
@@ -159,7 +176,29 @@ export default function WeekCompleteModal({ onClose }) {
             gap: 10,
           }}
         >
-          <Flame size={18} />
+          <FileText size={18} />
+          Ver Relatório da Semana
+        </button>
+
+        <button
+          onClick={() => { navigate('/history'); onClose() }}
+          style={{
+            height: 48,
+            borderRadius: 14,
+            background: 'none',
+            border: '1px solid var(--border)',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-display)',
+            fontSize: 14,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+          }}
+        >
+          <Flame size={16} />
           Ver Histórico
         </button>
       </div>

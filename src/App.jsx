@@ -11,6 +11,7 @@ import ExerciseView from './pages/ExerciseView'
 import History from './pages/History'
 import Progress from './pages/Progress'
 import Settings from './pages/Settings'
+import Diet from './pages/Diet'
 import Login from './pages/Login'
 import ProfileSetup from './pages/ProfileSetup'
 import Header from './components/layout/Header'
@@ -71,6 +72,7 @@ function AppShell() {
         <Route path="/day/:dayName" element={<DayView />} />
         <Route path="/exercise/:id" element={<ExerciseView />} />
         <Route path="/history" element={<History />} />
+        <Route path="/diet" element={<Diet />} />
         <Route path="/progress" element={<Progress />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>

@@ -268,7 +268,7 @@ export default function Settings() {
 
             {/* Creatine */}
             <OptionRow
-              label="💊 Lembrete de creatina"
+              label=" Lembrete de creatina"
               description="Lembrete diário para tomar 5g de creatina"
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -318,7 +318,7 @@ export default function Settings() {
 
             {/* Gym */}
             <OptionRow
-              label="🏋️ Lembrete da academia"
+              label=" Lembrete da academia"
               description="Mensagem motivacional para ir treinar"
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -487,7 +487,7 @@ export default function Settings() {
           </p>
           <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(200, 255, 0, 0.06)', borderRadius: 10 }}>
             <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
-              💊 Lembre-se: tome creatina diariamente (5g), inclusive nos dias de descanso
+              Lembre-se: tome creatina diariamente (5g), inclusive nos dias de descanso
             </span>
           </div>
         </div>

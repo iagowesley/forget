@@ -83,6 +83,15 @@ export function getStreak() {
   return getItem('streak', { current: 0, longest: 0, lastTrainingDate: null })
 }
 
+// Diet plan (one per user)
+export function getDiet(userId) {
+  return getItem(`diet_${userId}`, null)
+}
+
+export function saveDiet(userId, diet, goal) {
+  setItem(`diet_${userId}`, { diet, goal, generatedAt: new Date().toISOString() })
+}
+
 // Body weight history
 export function getWeightHistory() {
   return getItem('weight_history', [])

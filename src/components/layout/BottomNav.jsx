@@ -1,9 +1,10 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Zap, Clock, BarChart2, Settings } from 'lucide-react'
+import { Zap, Clock, BarChart2, Leaf, Settings } from 'lucide-react'
 
 const NAV_ITEMS = [
   { path: '/today', icon: Zap, label: 'Hoje' },
   { path: '/history', icon: Clock, label: 'Histórico' },
+  { path: '/diet', icon: Leaf, label: 'Dieta' },
   { path: '/progress', icon: BarChart2, label: 'Evolução' },
   { path: '/settings', icon: Settings, label: 'Config' },
 ]
