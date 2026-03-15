@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '../components/layout/Header'
 import useAuthStore from '../store/authStore'
 import { getDiet, saveDiet } from '../lib/storage'
@@ -72,15 +72,42 @@ function renderDiet(text) {
 }
 
 export default function Diet() {
-  const { user, profile } = useAuthStore()
+  const { user, profile, saveProfile } = useAuthStore()
   const userId = user?.id
 
-  const stored = useMemo(() => userId ? getDiet(userId) : null, [userId])
-  const [tab, setTab] = useState(stored ? 'plan' : 'tips')
-  const [goal, setGoal] = useState(stored?.goal || 'gain_muscle')
+  const [result, setResult] = useState(null)
+  const [tab, setTab] = useState('tips')
+  const [goal, setGoal] = useState('gain_muscle')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState(stored)
+
+  // Load from Supabase profile (authoritative) or localStorage (cache)
+  useEffect(() => {
+    if (!profile) return
+    if (result) return // already loaded
+
+    if (profile.diet_plan) {
+      // Supabase has the diet — use it
+      const entry = {
+        diet: profile.diet_plan,
+        goal: profile.diet_goal || 'gain_muscle',
+        generatedAt: profile.diet_generated_at || new Date().toISOString(),
+      }
+      setResult(entry)
+      setGoal(entry.goal)
+      setTab('plan')
+      // Also refresh localStorage cache
+      if (userId) saveDiet(userId, profile.diet_plan, profile.diet_goal)
+    } else if (userId) {
+      // Fall back to localStorage (e.g. offline or migration)
+      const cached = getDiet(userId)
+      if (cached) {
+        setResult(cached)
+        setGoal(cached.goal || 'gain_muscle')
+        setTab('plan')
+      }
+    }
+  }, [profile])
 
   const alreadyGenerated = !!result
 
@@ -96,8 +123,20 @@ export default function Diet() {
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Erro ao gerar dieta')
-      const entry = { diet: data.diet, goal, generatedAt: new Date().toISOString() }
-      saveDiet(userId, data.diet, goal)
+
+      const generatedAt = new Date().toISOString()
+      const entry = { diet: data.diet, goal, generatedAt }
+
+      // Save to Supabase (persiste após logout/troca de dispositivo)
+      await saveProfile({
+        diet_plan: data.diet,
+        diet_goal: goal,
+        diet_generated_at: generatedAt,
+      })
+
+      // Cache no localStorage (carregamento rápido)
+      if (userId) saveDiet(userId, data.diet, goal)
+
       setResult(entry)
       setTab('plan')
     } catch (e) {

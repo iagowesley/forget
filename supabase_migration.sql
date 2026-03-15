@@ -140,3 +140,10 @@ CREATE TRIGGER on_auth_user_created
 -- Migração: adicionar coluna gender (rodar se tabela já existe)
 -- =============================================
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS gender TEXT DEFAULT 'male';
+
+-- =============================================
+-- Migração: plano de dieta gerado por IA
+-- =============================================
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS diet_plan TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS diet_goal TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS diet_generated_at TIMESTAMPTZ;
