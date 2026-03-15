@@ -13,6 +13,12 @@ export default function BottomNav() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  const activeIndex = NAV_ITEMS.findIndex(
+    ({ path }) => location.pathname === path || location.pathname.startsWith(path + '/')
+  )
+
+  const itemWidthPct = 100 / NAV_ITEMS.length
+
   return (
     <nav style={{
       position: 'fixed',
@@ -25,12 +31,27 @@ export default function BottomNav() {
       backdropFilter: 'blur(28px) saturate(180%)',
       WebkitBackdropFilter: 'blur(28px) saturate(180%)',
       border: '1px solid rgba(255, 255, 255, 0.10)',
-      borderRadius: 28,
+      borderRadius: 32,
       display: 'flex',
-      padding: '4px 8px',
+      padding: '6px 10px',
       zIndex: 100,
       boxShadow: '0 8px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.06) inset',
     }}>
+      {/* Sliding indicator */}
+      {activeIndex >= 0 && (
+        <div style={{
+          position: 'absolute',
+          top: 6,
+          bottom: 6,
+          left: `calc(10px + ${activeIndex * itemWidthPct}%)`,
+          width: `${itemWidthPct}%`,
+          background: 'rgba(200, 255, 0, 0.13)',
+          borderRadius: 999,
+          transition: 'left 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          pointerEvents: 'none',
+        }} />
+      )}
+
       {NAV_ITEMS.map(({ path, icon: Icon, label }) => {
         const active = location.pathname === path || location.pathname.startsWith(path + '/')
         return (
@@ -43,19 +64,26 @@ export default function BottomNav() {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '8px 0',
-              background: active ? 'rgba(200, 255, 0, 0.12)' : 'none',
-              borderRadius: 20,
+              padding: '10px 0',
+              background: 'none',
+              borderRadius: 999,
               border: 'none',
               cursor: 'pointer',
               color: active ? 'var(--accent)' : 'rgba(255,255,255,0.45)',
               gap: 3,
-              minHeight: 52,
-              transition: 'color 0.2s, background 0.2s',
+              minHeight: 56,
+              position: 'relative',
+              zIndex: 1,
+              transition: 'color 0.3s ease',
             }}
           >
-            <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
-            <span style={{ fontSize: 10, fontWeight: active ? 600 : 400, fontFamily: 'var(--font-body)' }}>
+            <Icon size={22} strokeWidth={active ? 2.5 : 1.8} style={{ transition: 'stroke-width 0.3s ease' }} />
+            <span style={{
+              fontSize: 10,
+              fontWeight: active ? 600 : 400,
+              fontFamily: 'var(--font-body)',
+              transition: 'font-weight 0.3s ease',
+            }}>
               {label}
             </span>
           </button>
