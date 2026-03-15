@@ -217,19 +217,23 @@ export default function Diet() {
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        buffer = lines.pop()
+        buffer = lines.pop() ?? ''
 
         for (const line of lines) {
+          // skip event: lines and empty lines
           if (!line.startsWith('data: ')) continue
           const data = line.slice(6).trim()
-          if (data === '[DONE]') continue
+          // skip empty, [DONE], and anything that isn't JSON
+          if (!data || data === '[DONE]' || !data.startsWith('{')) continue
           try {
-            const event = JSON.parse(data)
-            if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-              fullText += event.delta.text
+            const parsed = JSON.parse(data)
+            if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+              fullText += parsed.delta.text
               setStreamingDiet(fullText)
             }
-          } catch {}
+          } catch {
+            // ignore malformed lines
+          }
         }
       }
 
