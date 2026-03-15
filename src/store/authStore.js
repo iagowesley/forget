@@ -33,15 +33,18 @@ const useAuthStore = create((set, get) => ({
 
   initialize: () => {
     // Check existing session first
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const user = session?.user ?? null
-      set({ user })
-      if (user) {
-        await get().loadProfile(user.id)
-        await syncFromCloud(user.id)
-      }
-      set({ loading: false })
-    })
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        const user = session?.user ?? null
+        set({ user })
+        if (user) {
+          await get().loadProfile(user.id)
+        }
+        set({ loading: false })
+        // Sync cloud data in background — does not block the app from loading
+        if (user) syncFromCloud(user.id)
+      })
+      .catch(() => set({ loading: false }))
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -49,7 +52,7 @@ const useAuthStore = create((set, get) => ({
       set({ user })
       if (user) {
         await get().loadProfile(user.id)
-        syncFromCloud(user.id) // fire and forget after initial login
+        syncFromCloud(user.id)
       } else {
         set({ profile: null })
       }
