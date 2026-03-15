@@ -1,20 +1,22 @@
-exports.handler = async (event) => {
-  const headers = {
+export default async function handler(request) {
+  const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json',
   }
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' }
+  if (request.method === 'OPTIONS') {
+    return new Response('', { status: 200, headers: corsHeaders })
   }
 
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   try {
-    const { profile, goals } = JSON.parse(event.body)
+    const { profile, goals } = await request.json()
     const { username, weight_kg, height_cm, birth_year, gender, experience } = profile
 
     const age = birth_year ? new Date().getFullYear() - birth_year : null
@@ -45,31 +47,64 @@ exports.handler = async (event) => {
       ? 'Treino feminino com foco em glúteo, posterior e quadríceps (inferior 3x semana + superiores 2x)'
       : 'Treino PPL — Push/Pull/Legs (5x semana, hipertrofia e força)'
 
-    const prompt = `Você é nutricionista esportivo. Crie um plano alimentar em português para:
+    const prompt = `Você é um nutricionista esportivo especializado. Gere um plano alimentar semanal COMPLETO e DETALHADO em português brasileiro para a pessoa abaixo.
 
-- ${genderLabel}, ${weight_kg}kg, ${height_cm}cm${age ? `, ${age} anos` : ''}${bmi ? `, IMC ${bmi}` : ''}
-- Nível: ${expLabel} | ${trainFocus}
+DADOS DO USUÁRIO:
+- Nome: ${username || 'Usuário'}
+- Sexo: ${genderLabel}
+- Peso: ${weight_kg}kg
+- Altura: ${height_cm}cm
+${age ? `- Idade: ${age} anos` : ''}
+${bmi ? `- IMC: ${bmi}` : ''}
+- Nível de treino: ${expLabel}
+- Modalidade: ${trainFocus}
 - Objetivo(s): ${goalsLabels}
-${isMultiGoal ? `\n${goalsContext}\n\nEquilibre o plano entre todos os objetivos.` : ''}
 
-## 📊 MACROS DIÁRIOS
-Calorias, proteínas (g), carboidratos (g), gorduras (g), água (L).${isMultiGoal ? ' Variação treino vs descanso.' : ''}
+${isMultiGoal ? `CONTEXTO DOS OBJETIVOS COMBINADOS:
+${goalsContext}
 
-## 🍽️ CARDÁPIO (3 dias modelo: Treino A, Treino B, Descanso)
-Para cada dia: café da manhã, almoço, lanche, jantar (com quantidades em gramas).
+⚠️ O plano deve ser EQUILIBRADO entre todos os objetivos acima, priorizando estratégias que beneficiam múltiplos objetivos simultaneamente (ex: alta proteína, ciclagem de carboidratos, refeições pré/pós treino otimizadas).` : `CONTEXTO DO OBJETIVO:
+${goalsContext}`}
 
-## ✅ TOP 8 ALIMENTOS para o objetivo
-## ❌ TOP 5 ALIMENTOS A EVITAR
+GERE O SEGUINTE (seja ESPECÍFICO com gramas e porções):
 
-## ⏰ TIMING: pré-treino e pós-treino ideais
+## 📊 CÁLCULO DE MACROS DIÁRIOS
+- Calorias totais (justifique com base nos objetivos)
+- Proteínas (g e % das calorias)
+- Carboidratos (g e % das calorias)
+- Gorduras (g e % das calorias)
+- Água (litros/dia)
+${isMultiGoal ? '- Variação nos dias de treino vs. descanso (se aplicável para os objetivos)' : ''}
 
-## 💊 SUPLEMENTOS com dosagem
+## 🍽️ CARDÁPIO SEMANAL (Segunda a Domingo)
+Para cada dia da semana, escreva:
+**[Dia da semana]** (Dia de treino / Descanso)
+- ☀️ Café da manhã (com quantidades)
+- 🥗 Almoço (com quantidades)
+- 🍎 Lanche da tarde (com quantidades)
+- 🌙 Jantar (com quantidades)
+- 🌛 Ceia opcional (se necessário)
 
-## 💡 3 DICAS PRÁTICAS
+## ✅ ALIMENTOS PRIORIDADE
+Liste os 10 melhores alimentos para ${isMultiGoal ? 'esses objetivos combinados' : 'o objetivo'}.
 
-Seja direto, use emojis, especifique gramas/porções.`
+## ❌ ALIMENTOS A EVITAR
+Liste os 5 alimentos que prejudicam ${isMultiGoal ? 'esses objetivos' : 'o objetivo'}.
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+## ⏰ TIMING DE REFEIÇÕES
+- Horário ideal das refeições
+- O que comer pré-treino (1h antes)
+- O que comer pós-treino (até 30min depois)
+
+## 💊 SUPLEMENTAÇÃO SUGERIDA
+Liste suplementos relevantes com dosagem.
+
+## 💡 DICAS IMPORTANTES
+3-4 dicas específicas para ${isMultiGoal ? 'os objetivos combinados' : 'o objetivo'}.
+
+Formate tudo de forma clara, use emojis para organização e seja prático e direto.`
+
+    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -77,22 +112,33 @@ Seja direto, use emojis, especifique gramas/porções.`
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2000,
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4000,
+        stream: true,
         messages: [{ role: 'user', content: prompt }],
       }),
     })
 
-    if (!response.ok) {
-      const err = await response.text()
-      return { statusCode: response.status, headers, body: JSON.stringify({ error: err }) }
+    if (!anthropicRes.ok) {
+      const err = await anthropicRes.text()
+      return new Response(JSON.stringify({ error: err }), {
+        status: anthropicRes.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    const data = await response.json()
-    const diet = data.content[0].text
-
-    return { statusCode: 200, headers, body: JSON.stringify({ diet }) }
+    return new Response(anthropicRes.body, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    })
   } catch (err) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) }
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 }

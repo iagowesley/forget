@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import Header from '../components/layout/Header'
 import useAuthStore from '../store/authStore'
 import { getDiet, saveDiet } from '../lib/storage'
-import { Leaf, Zap, ChevronRight, Lock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Leaf, Zap, ChevronRight, Lock, CheckCircle, AlertCircle, Download } from 'lucide-react'
 
 const GOALS = [
-  { id: 'lose_fat',      label: 'Perda de Gordura',    desc: 'Déficit calórico, preservar músculo', emoji: '🔥' },
-  { id: 'gain_muscle',   label: 'Ganho de Massa',       desc: 'Superávit calórico, maximizar hipertrofia', emoji: '💪' },
-  { id: 'recomposition', label: 'Recomposição',         desc: 'Perder gordura e ganhar músculo simultaneamente', emoji: '⚡' },
-  { id: 'maintain',      label: 'Manutenção',           desc: 'Manter o peso e desempenho atual', emoji: '🎯' },
+  { id: 'lose_fat', label: 'Perda de Gordura', desc: 'Déficit calórico, preservar músculo', emoji: '🔥' },
+  { id: 'gain_muscle', label: 'Ganho de Massa', desc: 'Superávit calórico, maximizar hipertrofia', emoji: '💪' },
+  { id: 'recomposition', label: 'Recomposição', desc: 'Perder gordura e ganhar músculo simultaneamente', emoji: '⚡' },
+  { id: 'maintain', label: 'Manutenção', desc: 'Manter o peso e desempenho atual', emoji: '🎯' },
 ]
 
 const TIPS = [
@@ -71,6 +71,62 @@ function renderDiet(text) {
   })
 }
 
+function openPDF(dietText, goals, generatedAt, profile) {
+  const goalsLabel = goals?.length > 0
+    ? goals.map(id => GOALS.find(g => g.id === id)?.label).filter(Boolean).join(' · ')
+    : 'Plano personalizado'
+
+  const date = generatedAt
+    ? new Date(generatedAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('pt-BR')
+
+  const bodyHtml = dietText.split('\n').map(line => {
+    if (!line.trim()) return '<br>'
+    if (line.startsWith('## ')) return `<h2>${line.replace('## ', '')}</h2>`
+    if (line.startsWith('**') && line.endsWith('**')) return `<h3>${line.replace(/\*\*/g, '')}</h3>`
+    if (line.startsWith('- ') || line.startsWith('• ')) return `<li>${line.replace(/^[-•] /, '')}</li>`
+    return `<p>${line}</p>`
+  }).join('\n')
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Plano de Dieta — FORGEfit</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 32px 24px; color: #111; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 12px; }
+    .meta { background: #f5f5f5; border-radius: 8px; padding: 12px 16px; margin-bottom: 28px; font-size: 13px; color: #444; line-height: 1.9; }
+    .accent { color: #5a8500; font-weight: 700; }
+    h2 { font-size: 15px; font-weight: 700; margin-top: 24px; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 2px solid #c8ff00; color: #111; }
+    h3 { font-size: 13px; font-weight: 700; margin-top: 12px; margin-bottom: 4px; color: #333; }
+    p { font-size: 13px; color: #444; line-height: 1.7; margin-bottom: 3px; }
+    li { font-size: 13px; color: #444; line-height: 1.7; margin-left: 18px; margin-bottom: 3px; }
+    @media print { body { padding: 16px; } }
+  </style>
+</head>
+<body>
+  <h1>⚡ Plano de Dieta Personalizado</h1>
+  <div class="subtitle">FORGEfit — Gerado por Inteligência Artificial</div>
+  <div class="meta">
+    <span class="accent">Objetivo:</span> ${goalsLabel}<br>
+    <span class="accent">Gerado em:</span> ${date}
+    ${profile ? `<br><span class="accent">Atleta:</span> ${profile.username || 'Usuário'} · ${profile.weight_kg}kg · ${profile.height_cm}cm` : ''}
+  </div>
+  ${bodyHtml}
+</body>
+</html>`
+
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
+  win.focus()
+  setTimeout(() => win.print(), 400)
+}
+
 export default function Diet() {
   const { user, profile, saveProfile } = useAuthStore()
   const userId = user?.id
@@ -79,6 +135,8 @@ export default function Diet() {
   const [tab, setTab] = useState('tips')
   const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(false)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [streamingDiet, setStreamingDiet] = useState('')
   const [error, setError] = useState('')
 
   const parseGoals = (raw) => {
@@ -91,10 +149,9 @@ export default function Diet() {
     }
   }
 
-  // Load from Supabase profile (authoritative) or localStorage (cache)
   useEffect(() => {
     if (!profile) return
-    if (result) return // already loaded
+    if (result) return
 
     if (profile.diet_plan) {
       const entry = {
@@ -125,42 +182,79 @@ export default function Diet() {
     })
   }
 
-  const alreadyGenerated = !!result
-
   const handleGenerate = async () => {
     if (!profile) { setError('Perfil não carregado'); return }
     if (goals.length === 0) { setError('Selecione pelo menos um objetivo'); return }
     setLoading(true)
+    setIsStreaming(false)
+    setStreamingDiet('')
     setError('')
+
     try {
       const res = await fetch('/.netlify/functions/generate-diet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile, goals }),
       })
-      const data = await res.json()
-      if (!res.ok || data.error) throw new Error(data.error || 'Erro ao gerar dieta')
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `Erro ${res.status}` }))
+        throw new Error(err.error || 'Erro ao gerar dieta')
+      }
+
+      setLoading(false)
+      setIsStreaming(true)
+      setTab('plan')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let fullText = ''
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6).trim()
+          if (data === '[DONE]') continue
+          try {
+            const event = JSON.parse(data)
+            if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+              fullText += event.delta.text
+              setStreamingDiet(fullText)
+            }
+          } catch {}
+        }
+      }
+
+      setIsStreaming(false)
 
       const generatedAt = new Date().toISOString()
       const goalsJson = JSON.stringify(goals)
-      const entry = { diet: data.diet, goals, generatedAt }
+      const entry = { diet: fullText, goals, generatedAt }
 
       await saveProfile({
-        diet_plan: data.diet,
+        diet_plan: fullText,
         diet_goal: goalsJson,
         diet_generated_at: generatedAt,
       })
 
-      if (userId) saveDiet(userId, data.diet, goalsJson)
-
+      if (userId) saveDiet(userId, fullText, goalsJson)
       setResult(entry)
-      setTab('plan')
     } catch (e) {
       setError(e.message)
-    } finally {
       setLoading(false)
+      setIsStreaming(false)
     }
   }
+
+  const alreadyGenerated = !!result
 
   return (
     <>
@@ -235,9 +329,9 @@ export default function Diet() {
         {/* PLAN TAB */}
         {tab === 'plan' && (
           <>
-            {!alreadyGenerated ? (
+            {/* Generation form */}
+            {!alreadyGenerated && !isStreaming && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Info banner */}
                 <div style={{
                   background: 'rgba(200,255,0,0.06)',
                   border: '1px solid rgba(200,255,0,0.2)',
@@ -258,7 +352,6 @@ export default function Diet() {
                   </div>
                 </div>
 
-                {/* Goal selection */}
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                     <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -325,7 +418,6 @@ export default function Diet() {
                   </div>
                 </div>
 
-                {/* Profile preview */}
                 {profile && (
                   <div style={{
                     background: 'var(--bg-card)',
@@ -395,8 +487,8 @@ export default function Diet() {
                 >
                   {loading ? (
                     <>
-                      <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⚙️</span>
-                      Gerando seu plano...
+                      <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⚡</span>
+                      Conectando com a IA...
                     </>
                   ) : (
                     <>
@@ -406,15 +498,42 @@ export default function Diet() {
                     </>
                   )}
                 </button>
-
-                {loading && (
-                  <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-secondary)' }}>
-                    Isso pode levar até 30 segundos. A IA está montando seu plano personalizado...
-                  </p>
-                )}
               </div>
-            ) : (
-              /* Diet already generated */
+            )}
+
+            {/* Streaming in progress */}
+            {isStreaming && (
+              <div>
+                <div style={{
+                  background: 'rgba(200,255,0,0.06)',
+                  border: '1px solid rgba(200,255,0,0.2)',
+                  borderRadius: 14,
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginBottom: 16,
+                }}>
+                  <span style={{ animation: 'spin 1.5s linear infinite', display: 'inline-block', fontSize: 18 }}>⚡</span>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>Gerando seu plano...</p>
+                    <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>A IA está montando seu plano personalizado</p>
+                  </div>
+                </div>
+                <div style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 14,
+                  padding: '16px',
+                }}>
+                  {renderDiet(streamingDiet)}
+                  <span style={{ animation: 'blink 1s step-end infinite', color: 'var(--accent)', fontWeight: 700 }}>|</span>
+                </div>
+              </div>
+            )}
+
+            {/* Diet already generated */}
+            {alreadyGenerated && !isStreaming && (
               <div>
                 {/* Header badge */}
                 <div style={{
@@ -425,7 +544,7 @@ export default function Diet() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  marginBottom: 20,
+                  marginBottom: 12,
                 }}>
                   <CheckCircle size={18} color="var(--accent)" />
                   <div style={{ flex: 1 }}>
@@ -441,6 +560,34 @@ export default function Diet() {
                   </div>
                   <Zap size={16} color="var(--accent)" />
                 </div>
+
+                {/* PDF download button */}
+                <button
+                  onClick={() => openPDF(result.diet, result.goals, result.generatedAt, profile)}
+                  style={{
+                    width: '100%',
+                    height: 44,
+                    borderRadius: 12,
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-secondary)',
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    marginBottom: 16,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+                >
+                  <Download size={16} />
+                  Baixar PDF / Imprimir
+                </button>
 
                 {/* Diet content */}
                 <div style={{
@@ -459,6 +606,7 @@ export default function Diet() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
       `}</style>
     </>
   )
