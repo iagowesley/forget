@@ -9,9 +9,6 @@
   targetPort = 5173
   autoLaunch = false
 
-[functions]
-  timeout = 30
-
 [[redirects]]
   from = "/*"
   to = "/index.html"
