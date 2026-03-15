@@ -77,9 +77,19 @@ export default function Diet() {
 
   const [result, setResult] = useState(null)
   const [tab, setTab] = useState('tips')
-  const [goal, setGoal] = useState('gain_muscle')
+  const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const parseGoals = (raw) => {
+    if (!raw) return []
+    try {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed : [parsed]
+    } catch {
+      return [raw]
+    }
+  }
 
   // Load from Supabase profile (authoritative) or localStorage (cache)
   useEffect(() => {
@@ -87,55 +97,61 @@ export default function Diet() {
     if (result) return // already loaded
 
     if (profile.diet_plan) {
-      // Supabase has the diet — use it
       const entry = {
         diet: profile.diet_plan,
-        goal: profile.diet_goal || 'gain_muscle',
+        goals: parseGoals(profile.diet_goal),
         generatedAt: profile.diet_generated_at || new Date().toISOString(),
       }
       setResult(entry)
-      setGoal(entry.goal)
+      setGoals(entry.goals)
       setTab('plan')
-      // Also refresh localStorage cache
       if (userId) saveDiet(userId, profile.diet_plan, profile.diet_goal)
     } else if (userId) {
-      // Fall back to localStorage (e.g. offline or migration)
       const cached = getDiet(userId)
       if (cached) {
-        setResult(cached)
-        setGoal(cached.goal || 'gain_muscle')
+        const entry = { ...cached, goals: parseGoals(cached.goal) }
+        setResult(entry)
+        setGoals(entry.goals)
         setTab('plan')
       }
     }
   }, [profile])
 
+  const toggleGoal = (id) => {
+    setGoals(prev => {
+      if (prev.includes(id)) return prev.filter(g => g !== id)
+      if (prev.length >= 3) return prev
+      return [...prev, id]
+    })
+  }
+
   const alreadyGenerated = !!result
 
   const handleGenerate = async () => {
     if (!profile) { setError('Perfil não carregado'); return }
+    if (goals.length === 0) { setError('Selecione pelo menos um objetivo'); return }
     setLoading(true)
     setError('')
     try {
       const res = await fetch('/.netlify/functions/generate-diet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile, goal }),
+        body: JSON.stringify({ profile, goals }),
       })
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Erro ao gerar dieta')
 
       const generatedAt = new Date().toISOString()
-      const entry = { diet: data.diet, goal, generatedAt }
+      const goalsJson = JSON.stringify(goals)
+      const entry = { diet: data.diet, goals, generatedAt }
 
-      // Save to Supabase (persiste após logout/troca de dispositivo)
       await saveProfile({
         diet_plan: data.diet,
-        diet_goal: goal,
+        diet_goal: goalsJson,
         diet_generated_at: generatedAt,
       })
 
-      // Cache no localStorage (carregamento rápido)
-      if (userId) saveDiet(userId, data.diet, goal)
+      if (userId) saveDiet(userId, data.diet, goalsJson)
 
       setResult(entry)
       setTab('plan')
@@ -244,44 +260,68 @@ export default function Diet() {
 
                 {/* Goal selection */}
                 <div>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                    Qual é seu objetivo?
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Quais são seus objetivos?
+                    </p>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, borderRadius: 999, padding: '3px 10px',
+                      background: goals.length > 0 ? 'rgba(200,255,0,0.1)' : 'var(--bg-surface)',
+                      color: goals.length > 0 ? 'var(--accent)' : 'var(--text-disabled)',
+                    }}>
+                      {goals.length}/3
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                    Selecione até 3 objetivos. A dieta será balanceada entre eles.
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {GOALS.map(g => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => setGoal(g.id)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 12,
-                          padding: '12px 16px',
-                          background: goal === g.id ? 'rgba(200,255,0,0.08)' : 'var(--bg-card)',
-                          border: `1.5px solid ${goal === g.id ? 'var(--accent)' : 'var(--border)'}`,
-                          borderRadius: 12,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <span style={{ fontSize: 22, flexShrink: 0 }}>{g.emoji}</span>
-                        <div style={{ flex: 1 }}>
-                          <p style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: goal === g.id ? 'var(--accent)' : 'var(--text-primary)',
-                            marginBottom: 1,
+                    {GOALS.map(g => {
+                      const selected = goals.includes(g.id)
+                      const disabled = !selected && goals.length >= 3
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => !disabled && toggleGoal(g.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '12px 16px',
+                            background: selected ? 'rgba(200,255,0,0.08)' : 'var(--bg-card)',
+                            border: `1.5px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+                            borderRadius: 12,
+                            cursor: disabled ? 'not-allowed' : 'pointer',
+                            textAlign: 'left',
+                            opacity: disabled ? 0.45 : 1,
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          <span style={{ fontSize: 22, flexShrink: 0 }}>{g.emoji}</span>
+                          <div style={{ flex: 1 }}>
+                            <p style={{
+                              fontFamily: 'var(--font-display)',
+                              fontSize: 14,
+                              fontWeight: 600,
+                              color: selected ? 'var(--accent)' : 'var(--text-primary)',
+                              marginBottom: 1,
+                            }}>
+                              {g.label}
+                            </p>
+                            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{g.desc}</p>
+                          </div>
+                          <div style={{
+                            width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                            background: selected ? 'var(--accent)' : 'var(--bg-surface)',
+                            border: `2px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
-                            {g.label}
-                          </p>
-                          <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{g.desc}</p>
-                        </div>
-                        {goal === g.id && <CheckCircle size={18} color="var(--accent)" style={{ flexShrink: 0 }} />}
-                      </button>
-                    ))}
+                            {selected && <span style={{ fontSize: 13, color: '#000', fontWeight: 700 }}>✓</span>}
+                          </div>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -336,14 +376,14 @@ export default function Diet() {
 
                 <button
                   onClick={handleGenerate}
-                  disabled={loading}
+                  disabled={loading || goals.length === 0}
                   style={{
                     height: 56,
                     borderRadius: 14,
-                    background: loading ? 'var(--bg-surface)' : 'var(--accent)',
+                    background: (loading || goals.length === 0) ? 'var(--bg-surface)' : 'var(--accent)',
                     border: 'none',
-                    color: loading ? 'var(--text-disabled)' : '#000',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    color: (loading || goals.length === 0) ? 'var(--text-disabled)' : '#000',
+                    cursor: (loading || goals.length === 0) ? 'not-allowed' : 'pointer',
                     fontFamily: 'var(--font-display)',
                     fontSize: 16,
                     fontWeight: 700,
@@ -390,7 +430,10 @@ export default function Diet() {
                   <CheckCircle size={18} color="var(--accent)" />
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
-                      Plano {GOALS.find(g => g.id === result.goal)?.label || ''} gerado
+                      {(result.goals?.length > 0
+                        ? result.goals.map(id => GOALS.find(g => g.id === id)?.label).filter(Boolean).join(' · ')
+                        : GOALS.find(g => g.id === result.goal)?.label
+                      ) || 'Plano personalizado'}
                     </p>
                     <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                       {new Date(result.generatedAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
