@@ -16,8 +16,25 @@ const useWorkoutStore = create((set, get) => ({
   initSession: (dayKey, dateKey, dayPlan) => {
     if (!dayPlan || dayPlan.type === 'Rest') return
 
+    const planExercises = dayPlan.exercises.map(ex => ({
+      id: ex.id,
+      name: ex.name,
+      completed: false,
+      sets: Array.from({ length: ex.sets }, (_, i) => ({
+        setNumber: i + 1,
+        plannedRepsMin: ex.repsMin,
+        plannedRepsMax: ex.repsMax,
+        actualReps: null,
+        weightKg: null,
+        completed: false,
+        completedAt: null,
+      })),
+    }))
+
     let session = getSession(dateKey)
+
     if (!session) {
+      // No local session — create fresh from plan
       session = {
         dateKey,
         dayKey,
@@ -25,22 +42,15 @@ const useWorkoutStore = create((set, get) => ({
         startedAt: null,
         finishedAt: null,
         completed: false,
-        exercises: dayPlan.exercises.map(ex => ({
-          id: ex.id,
-          name: ex.name,
-          completed: false,
-          sets: Array.from({ length: ex.sets }, (_, i) => ({
-            setNumber: i + 1,
-            plannedRepsMin: ex.repsMin,
-            plannedRepsMax: ex.repsMax,
-            actualReps: null,
-            weightKg: null,
-            completed: false,
-            completedAt: null,
-          })),
-        })),
+        exercises: planExercises,
       }
+    } else if (!session.exercises?.length) {
+      // Session came from Supabase without sets (e.g. sync issue) — rebuild exercises
+      // but preserve timing so the user can continue where they left off
+      session = { ...session, exercises: planExercises }
+      saveSession(dateKey, session)
     }
+
     set({ currentSession: session })
   },
 

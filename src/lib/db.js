@@ -31,11 +31,24 @@ export async function upsertWorkoutSession(userId, session) {
 }
 
 /**
- * Upsert all sets from all exercises in a session.
+ * Save all sets for a session using DELETE + INSERT.
+ * Avoids needing a unique constraint on exercise_sets.
  */
 export async function upsertSessionSets(sessionId, exercises) {
   if (!sessionId || !exercises?.length) return
 
+  // Delete existing sets for this session first
+  const { error: deleteError } = await supabase
+    .from('exercise_sets')
+    .delete()
+    .eq('session_id', sessionId)
+
+  if (deleteError) {
+    console.error('[db] delete sets error:', deleteError.message)
+    return
+  }
+
+  // Build rows for all sets across all exercises
   const rows = []
   for (const ex of exercises) {
     for (const s of ex.sets) {
@@ -54,15 +67,20 @@ export async function upsertSessionSets(sessionId, exercises) {
     }
   }
 
-  const { error } = await supabase
-    .from('exercise_sets')
-    .upsert(rows, { onConflict: 'session_id,exercise_id,set_number' })
+  if (rows.length === 0) return
 
-  if (error) console.error('[db] upsertSessionSets:', error.message)
+  const { error: insertError } = await supabase
+    .from('exercise_sets')
+    .insert(rows)
+
+  if (insertError) {
+    console.error('[db] insert sets error:', insertError.message)
+  }
 }
 
 /**
  * Sync a full session (metadata + all sets) to Supabase.
+ * Returns the Supabase session UUID or null.
  */
 export async function syncSession(userId, session) {
   const sessionId = await upsertWorkoutSession(userId, session)

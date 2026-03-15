@@ -154,16 +154,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS diet_generated_at TIMESTAMPTZ;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS weight_history JSONB DEFAULT '[]';
 
 -- =============================================
--- Migração: constraint única para upsert de séries
--- Necessário para sincronização cross-device
+-- Migração: índice para performance nas séries
+-- (não é uma constraint de unicidade — o sync usa DELETE+INSERT)
 -- =============================================
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'uq_sets_session_exercise_set'
-  ) THEN
-    ALTER TABLE exercise_sets
-      ADD CONSTRAINT uq_sets_session_exercise_set
-      UNIQUE (session_id, exercise_id, set_number);
-  END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_sets_session_exercise ON exercise_sets(session_id, exercise_id, set_number);
