@@ -113,7 +113,7 @@ Formate tudo de forma clara, use emojis para organização e seja prático e dir
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
+        max_tokens: 8192,
         stream: true,
         messages: [{ role: 'user', content: prompt }],
       }),

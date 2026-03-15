@@ -20,52 +20,125 @@ const TIPS = [
   { title: 'Consistência > Perfeição', body: 'Seguir 80% do plano de forma consistente é muito melhor que 100% por 2 semanas e abandonar. Crie hábitos sustentáveis.', emoji: '📅' },
 ]
 
+// Renders inline **bold** within a text string
+function renderInline(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/)
+  return parts.map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={i} style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{part.slice(2, -2)}</strong>
+      : part
+  )
+}
+
 function renderDiet(text) {
   return text.split('\n').map((line, i) => {
-    if (!line.trim()) return <div key={i} style={{ height: 8 }} />
-    if (line.startsWith('## ')) {
+    const trimmed = line.trim()
+
+    if (!trimmed) return <div key={i} style={{ height: 6 }} />
+
+    // Section header: ## Title
+    if (trimmed.startsWith('## ')) {
       return (
         <h2 key={i} style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 17,
+          fontSize: 16,
           fontWeight: 700,
           color: 'var(--accent)',
-          marginTop: 20,
-          marginBottom: 8,
+          marginTop: 24,
+          marginBottom: 10,
           paddingBottom: 6,
-          borderBottom: '1px solid rgba(200,255,0,0.15)',
+          borderBottom: '1px solid rgba(200,255,0,0.18)',
         }}>
-          {line.replace('## ', '')}
+          {trimmed.slice(3)}
         </h2>
       )
     }
-    if (line.startsWith('**') && line.endsWith('**')) {
+
+    // Sub-header: ### Title
+    if (trimmed.startsWith('### ')) {
       return (
         <p key={i} style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: 700,
           color: 'var(--text-primary)',
           marginTop: 10,
           marginBottom: 4,
         }}>
-          {line.replace(/\*\*/g, '')}
+          {trimmed.slice(4)}
         </p>
       )
     }
-    if (line.startsWith('- ') || line.startsWith('• ')) {
+
+    // Day header: **Segunda-feira** (Dia de treino) — bold line with optional trailing text
+    if (trimmed.startsWith('**')) {
       return (
-        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 4 }}>
-          <span style={{ color: 'var(--accent)', fontSize: 12, marginTop: 3, flexShrink: 0 }}>▸</span>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-            {line.replace(/^[-•] /, '')}
+        <div key={i} style={{
+          background: 'rgba(200,255,0,0.06)',
+          border: '1px solid rgba(200,255,0,0.18)',
+          borderRadius: 8,
+          padding: '8px 12px',
+          marginTop: 16,
+          marginBottom: 6,
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 14,
+            fontWeight: 700,
+            color: 'var(--accent)',
+            margin: 0,
+          }}>
+            {renderInline(trimmed)}
           </p>
         </div>
       )
     }
+
+    // Bullet list item
+    if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+      const content = trimmed.replace(/^[-•] /, '')
+      return (
+        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 5, paddingLeft: 4 }}>
+          <span style={{ color: 'var(--accent)', fontSize: 11, marginTop: 4, flexShrink: 0 }}>▸</span>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>
+            {renderInline(content)}
+          </p>
+        </div>
+      )
+    }
+
+    // Numbered list: 1. item
+    if (/^\d+\.\s/.test(trimmed)) {
+      const num = trimmed.match(/^\d+/)[0]
+      const content = trimmed.replace(/^\d+\.\s/, '')
+      return (
+        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 5, paddingLeft: 4 }}>
+          <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700, marginTop: 2, flexShrink: 0, minWidth: 18 }}>{num}.</span>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>
+            {renderInline(content)}
+          </p>
+        </div>
+      )
+    }
+
+    // Meal label line starting with emoji (☀️ Café da manhã:)
+    if (/^\p{Emoji}/u.test(trimmed)) {
+      return (
+        <p key={i} style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--text-primary)',
+          lineHeight: 1.6,
+          marginTop: 8,
+          marginBottom: 3,
+        }}>
+          {renderInline(trimmed)}
+        </p>
+      )
+    }
+
     return (
       <p key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 2 }}>
-        {line}
+        {renderInline(trimmed)}
       </p>
     )
   })
