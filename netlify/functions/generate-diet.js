@@ -76,14 +76,16 @@ GERE O SEGUINTE (seja ESPECÍFICO com gramas e porções):
 - Água (litros/dia)
 ${isMultiGoal ? '- Variação nos dias de treino vs. descanso (se aplicável para os objetivos)' : ''}
 
-## 🍽️ CARDÁPIO SEMANAL (Segunda a Domingo)
-Para cada dia da semana, escreva:
-**[Dia da semana]** (Dia de treino / Descanso)
-- ☀️ Café da manhã (com quantidades)
-- 🥗 Almoço (com quantidades)
-- 🍎 Lanche da tarde (com quantidades)
-- 🌙 Jantar (com quantidades)
-- 🌛 Ceia opcional (se necessário)
+## 🍽️ CARDÁPIO SEMANAL COMPLETO
+⚠️ OBRIGATÓRIO: gere os 7 dias completos — Segunda, Terça, Quarta, Quinta, Sexta, Sábado e Domingo. NÃO use "repita o padrão", "similar ao dia anterior" ou qualquer atalho. Cada dia deve ter suas refeições escritas por completo.
+
+Para cada dia use exatamente este formato:
+**[Dia da semana]** ([Dia de treino / Dia de descanso])
+- ☀️ Café da manhã: [alimentos com gramas]
+- 🥗 Almoço: [alimentos com gramas]
+- 🍎 Lanche da tarde: [alimentos com gramas]
+- 🌙 Jantar: [alimentos com gramas]
+- 🌛 Ceia: [alimento opcional se necessário]
 
 ## ✅ ALIMENTOS PRIORIDADE
 Liste os 10 melhores alimentos para ${isMultiGoal ? 'esses objetivos combinados' : 'o objetivo'}.
@@ -113,7 +115,7 @@ Formate tudo de forma clara, use emojis para organização e seja prático e dir
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 8192,
+        max_tokens: 16000,
         stream: true,
         messages: [{ role: 'user', content: prompt }],
       }),
