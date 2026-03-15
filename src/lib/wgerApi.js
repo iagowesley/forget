@@ -23,108 +23,74 @@ function setCache(key, data) {
       data,
       expiresAt: Date.now() + CACHE_DURATION,
     }))
-  } catch { /* storage full, ignore */ }
+  } catch { /* storage full */ }
 }
 
 let lastRequestTime = 0
 async function rateLimitedFetch(url) {
-  const now = Date.now()
-  const elapsed = now - lastRequestTime
-  if (elapsed < 1000) {
-    await new Promise(r => setTimeout(r, 1000 - elapsed))
-  }
+  const elapsed = Date.now() - lastRequestTime
+  if (elapsed < 600) await new Promise(r => setTimeout(r, 600 - elapsed))
   lastRequestTime = Date.now()
-  const response = await fetch(url)
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  return response.json()
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
 }
 
-export async function searchExercise(name, language = 7) {
-  const cacheKey = `exercise_${language}_${name.toLowerCase().replace(/\s+/g, '_')}`
+// Fetch images from exerciseinfo endpoint (most reliable)
+async function fetchByBaseId(baseId) {
+  const data = await rateLimitedFetch(`${BASE_URL}/exerciseinfo/${baseId}/?format=json`)
+  const images = (data.images || [])
+    .filter(img => img.image)
+    .sort((a, b) => (b.is_main ? 1 : -1) - (a.is_main ? 1 : -1))
+    .map(img => img.image)
+  return images
+}
+
+// Fallback: search by exercise name using the search endpoint
+async function searchByName(name) {
+  const data = await rateLimitedFetch(
+    `${BASE_URL}/exercise/search/?term=${encodeURIComponent(name)}&language=english&format=json`
+  )
+  const suggestions = data.suggestions || []
+  if (!suggestions.length) return []
+
+  const baseId = suggestions[0].data?.base_id || suggestions[0].data?.id
+  if (!baseId) {
+    // Use image directly from suggestion if available
+    const img = suggestions[0].data?.image
+    return img ? [img] : []
+  }
+  return fetchByBaseId(baseId)
+}
+
+export async function fetchExerciseMedia(wgerName, wgerId = null) {
+  const cacheKey = `media3_${wgerId ?? wgerName.toLowerCase().replace(/\s+/g, '_')}`
   const cached = getCached(cacheKey)
   if (cached) return cached
 
-  try {
-    const data = await rateLimitedFetch(
-      `${BASE_URL}/exercise/?format=json&language=${language}&name=${encodeURIComponent(name)}&limit=5`
-    )
-    const results = data.results || []
-    setCache(cacheKey, results)
-    return results
-  } catch {
-    return []
+  let images = []
+
+  // Method 1: direct ID (most reliable)
+  if (wgerId) {
+    try {
+      images = await fetchByBaseId(wgerId)
+    } catch { /* fall through */ }
   }
-}
 
-export async function getExerciseImages(exerciseBaseId) {
-  const cacheKey = `images_${exerciseBaseId}`
-  const cached = getCached(cacheKey)
-  if (cached) return cached
-
-  try {
-    const data = await rateLimitedFetch(
-      `${BASE_URL}/exerciseimage/?format=json&exercise=${exerciseBaseId}&is_main=True`
-    )
-    const images = (data.results || []).map(img => img.image)
-    setCache(cacheKey, images)
-    return images
-  } catch {
-    return []
+  // Method 2: search by name
+  if (!images.length) {
+    try {
+      images = await searchByName(wgerName)
+    } catch { /* ignore */ }
   }
-}
 
-export async function getExerciseVideos(exerciseBaseId) {
-  const cacheKey = `videos_${exerciseBaseId}`
-  const cached = getCached(cacheKey)
-  if (cached) return cached
-
-  try {
-    const data = await rateLimitedFetch(
-      `${BASE_URL}/video/?format=json&exercise=${exerciseBaseId}`
-    )
-    const videos = (data.results || []).map(v => v.video)
-    setCache(cacheKey, videos)
-    return videos
-  } catch {
-    return []
-  }
-}
-
-export async function fetchExerciseMedia(wgerName) {
-  const cacheKey = `media_${wgerName.toLowerCase().replace(/\s+/g, '_')}`
-  const cached = getCached(cacheKey)
-  if (cached) return cached
-
-  try {
-    // Try Portuguese first, fallback to English
-    let exercises = await searchExercise(wgerName, 7)
-    if (!exercises.length) {
-      exercises = await searchExercise(wgerName, 2)
-    }
-
-    if (!exercises.length) {
-      const result = { images: [], video: null }
-      setCache(cacheKey, result)
-      return result
-    }
-
-    const exercise = exercises[0]
-    const baseId = exercise.exercise_base || exercise.id
-
-    const [images, videos] = await Promise.all([
-      getExerciseImages(baseId),
-      getExerciseVideos(baseId),
-    ])
-
-    const result = { images, video: videos[0] || null }
-    setCache(cacheKey, result)
-    return result
-  } catch {
-    return { images: [], video: null }
-  }
+  const result = { images, video: null }
+  setCache(cacheKey, result)
+  return result
 }
 
 export function clearWgerCache() {
-  const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX))
-  keys.forEach(k => localStorage.removeItem(k))
+  Object.keys(localStorage)
+    .filter(k => k.startsWith(CACHE_PREFIX))
+    .forEach(k => localStorage.removeItem(k))
 }

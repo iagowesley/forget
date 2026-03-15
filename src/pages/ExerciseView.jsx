@@ -28,7 +28,7 @@ export default function ExerciseView() {
   const [mediaIndex, setMediaIndex] = useState(0)
   const [mediaTab, setMediaTab] = useState('image') // 'image' | 'video'
 
-  const { images, video, loading: mediaLoading } = useWgerMedia(exercise?.wgerName)
+  const { images, video, loading: mediaLoading } = useWgerMedia(exercise?.wgerName, exercise?.wgerId ?? null)
 
   const timer = useTimer(restDuration)
 

@@ -9,6 +9,7 @@ export const WORKOUT_PLAN = {
     exercises: [
       {
         id: 'ex_push_a_01',
+        wgerId: 192,
         name: 'Supino Reto com Barra',
         muscles: ['Peito', 'Tríceps', 'Ombro'],
         primaryMuscle: 'Peito',
@@ -51,6 +52,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_push_a_04',
+        wgerId: 72,
         name: 'Desenvolvimento com Halteres',
         muscles: ['Ombro', 'Tríceps'],
         primaryMuscle: 'Ombro',
@@ -65,6 +67,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_push_a_05',
+        wgerId: 112,
         name: 'Elevação Lateral',
         muscles: ['Ombro Lateral'],
         primaryMuscle: 'Ombro Lateral',
@@ -79,6 +82,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_push_a_06',
+        wgerId: 63,
         name: 'Tríceps Corda (Pulley)',
         muscles: ['Tríceps'],
         primaryMuscle: 'Tríceps',
@@ -103,6 +107,7 @@ export const WORKOUT_PLAN = {
     exercises: [
       {
         id: 'ex_pull_a_01',
+        wgerId: 31,
         name: 'Barra Fixa (Pull-up)',
         muscles: ['Latíssimo', 'Bíceps', 'Rombóide'],
         primaryMuscle: 'Costas',
@@ -131,6 +136,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_pull_a_03',
+        wgerId: 102,
         name: 'Pulldown na Polia',
         muscles: ['Latíssimo', 'Bíceps'],
         primaryMuscle: 'Costas',
@@ -145,6 +151,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_pull_a_04',
+        wgerId: 84,
         name: 'Rosca Direta com Barra',
         muscles: ['Bíceps', 'Braquial'],
         primaryMuscle: 'Bíceps',
@@ -159,6 +166,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_pull_a_05',
+        wgerId: 118,
         name: 'Rosca Martelo',
         muscles: ['Bíceps', 'Braquiorradial'],
         primaryMuscle: 'Bíceps',
@@ -173,6 +181,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_pull_a_06',
+        wgerId: 179,
         name: 'Encolhimento com Barra',
         muscles: ['Trapézio'],
         primaryMuscle: 'Trapézio',
@@ -197,6 +206,7 @@ export const WORKOUT_PLAN = {
     exercises: [
       {
         id: 'ex_legs_a_01',
+        wgerId: 8,
         name: 'Agachamento Livre',
         muscles: ['Quadríceps', 'Glúteos', 'Posterior'],
         primaryMuscle: 'Quadríceps',
@@ -211,6 +221,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_legs_a_02',
+        wgerId: 45,
         name: 'Leg Press 45°',
         muscles: ['Quadríceps', 'Glúteos'],
         primaryMuscle: 'Quadríceps',
@@ -239,6 +250,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_legs_a_04',
+        wgerId: 80,
         name: 'Avanço com Halteres',
         muscles: ['Quadríceps', 'Glúteos', 'Posterior'],
         primaryMuscle: 'Glúteos',
@@ -267,6 +279,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_legs_a_06',
+        wgerId: 10,
         name: 'Abdominais',
         muscles: ['Abdômen'],
         primaryMuscle: 'Core',
@@ -291,6 +304,7 @@ export const WORKOUT_PLAN = {
     exercises: [
       {
         id: 'ex_push_b_01',
+        wgerId: 70,
         name: 'Desenvolvimento com Barra (Militar Press)',
         muscles: ['Ombro', 'Tríceps', 'Trapézio'],
         primaryMuscle: 'Ombro',
@@ -305,6 +319,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_push_b_02',
+        wgerId: 112,
         name: 'Elevação Lateral com Halteres',
         muscles: ['Ombro Lateral'],
         primaryMuscle: 'Ombro Lateral',
@@ -347,6 +362,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_push_b_05',
+        wgerId: 37,
         name: 'Mergulho nas Paralelas',
         muscles: ['Tríceps', 'Peito', 'Ombro'],
         primaryMuscle: 'Tríceps',
@@ -399,6 +415,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_pull_b_02',
+        wgerId: 103,
         name: 'Remada Baixa na Polia',
         muscles: ['Costas Média', 'Bíceps', 'Rombóide'],
         primaryMuscle: 'Costas',
@@ -413,6 +430,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_pull_b_03',
+        wgerId: 102,
         name: 'Puxada Aberta na Polia',
         muscles: ['Latíssimo', 'Redondo Maior'],
         primaryMuscle: 'Costas',
@@ -441,6 +459,7 @@ export const WORKOUT_PLAN = {
       },
       {
         id: 'ex_pull_b_05',
+        wgerId: 84,
         name: 'Rosca 21',
         muscles: ['Bíceps'],
         primaryMuscle: 'Bíceps',

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { fetchExerciseMedia } from '../lib/wgerApi'
 
-export function useWgerMedia(wgerName) {
+export function useWgerMedia(wgerName, wgerId = null) {
   const [media, setMedia] = useState({ images: [], video: null })
   const [loading, setLoading] = useState(true)
 
@@ -12,14 +12,14 @@ export function useWgerMedia(wgerName) {
     }
     let cancelled = false
     setLoading(true)
-    fetchExerciseMedia(wgerName).then(result => {
+    fetchExerciseMedia(wgerName, wgerId).then(result => {
       if (!cancelled) {
         setMedia(result)
         setLoading(false)
       }
     })
     return () => { cancelled = true }
-  }, [wgerName])
+  }, [wgerName, wgerId])
 
   return { ...media, loading }
 }

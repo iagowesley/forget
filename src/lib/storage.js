@@ -43,7 +43,7 @@ export function saveSession(dateKey, session) {
   }
 }
 
-export function getHistory(limit = 30) {
+export function getHistory(limit = 90) {
   const index = getItem('history_index', [])
   return index.slice(0, limit).map(dateKey => ({
     dateKey,
