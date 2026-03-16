@@ -16,7 +16,8 @@ export default function AuthGuard() {
 
     if (!user && !onAuthPage) {
       navigate('/login', { replace: true })
-    } else if (user && !profile?.profile_completed && location.pathname !== '/setup') {
+    } else if (user && profile !== undefined && !profile?.profile_completed && location.pathname !== '/setup') {
+      // profile === undefined means still loading — don't redirect yet
       navigate('/setup', { replace: true })
     } else if (user && profile?.profile_completed && onAuthPage) {
       navigate('/today', { replace: true })

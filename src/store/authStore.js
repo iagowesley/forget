@@ -28,34 +28,35 @@ async function syncFromCloud(userId) {
 
 const useAuthStore = create((set, get) => ({
   user: null,
-  profile: null,
+  profile: undefined, // undefined = still loading, null = no profile, object = loaded
   loading: true,
 
   initialize: () => {
-    // Safety timeout — if getSession hangs (offline/slow), unlock the app after 5s
-    const timeout = setTimeout(() => set({ loading: false }), 5000)
+    // Safety timeout — force-unlock after 6s no matter what
+    const timeout = setTimeout(() => set(state => ({ loading: false, profile: state.profile ?? null })), 6000)
 
     // Check existing session first
     supabase.auth.getSession()
       .then(async ({ data: { session } }) => {
         clearTimeout(timeout)
         const user = session?.user ?? null
-        set({ user })
+        // Unlock loading immediately — profile loads in background without blocking
+        set({ user, loading: false })
         if (user) {
-          await get().loadProfile(user.id)
+          get().loadProfile(user.id)
+          syncFromCloud(user.id)
+        } else {
+          set({ profile: null })
         }
-        set({ loading: false })
-        // Sync cloud data in background — does not block the app from loading
-        if (user) syncFromCloud(user.id)
       })
-      .catch(() => { clearTimeout(timeout); set({ loading: false }) })
+      .catch(() => { clearTimeout(timeout); set({ loading: false, profile: null }) })
 
-    // Listen for auth changes
+    // Listen for auth changes (login/logout events)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const user = session?.user ?? null
       set({ user })
       if (user) {
-        await get().loadProfile(user.id)
+        get().loadProfile(user.id)
         syncFromCloud(user.id)
       } else {
         set({ profile: null })
