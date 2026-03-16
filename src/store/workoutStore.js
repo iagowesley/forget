@@ -148,6 +148,23 @@ const useWorkoutStore = create((set, get) => ({
     set({ currentSession: updated })
   },
 
+  updateExerciseName: (dateKey, exerciseId, newName) => {
+    const { currentSession } = get()
+    if (!currentSession) return
+
+    const updated = {
+      ...currentSession,
+      exercises: currentSession.exercises.map(ex =>
+        ex.id !== exerciseId ? ex : { ...ex, name: newName }
+      ),
+    }
+    saveSession(dateKey, updated)
+    set({ currentSession: updated })
+
+    const userId = getUserId()
+    if (userId) syncSession(userId, updated).catch(console.error)
+  },
+
   updateSettings: (newSettings) => {
     const merged = { ...get().settings, ...newSettings }
     saveSettings(merged)

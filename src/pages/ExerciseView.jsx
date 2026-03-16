@@ -9,7 +9,7 @@ import Header from '../components/layout/Header'
 import SetTracker from '../components/workout/SetTracker'
 import RestTimer from '../components/workout/RestTimer'
 import CompletionScreen from '../components/workout/CompletionScreen'
-import { Clock, Info, Dumbbell, ChevronDown, ChevronUp, Image } from 'lucide-react'
+import { Clock, Info, Dumbbell, ChevronDown, ChevronUp, Image, Pencil, Check, X } from 'lucide-react'
 
 export default function ExerciseView() {
   const { id } = useParams()
@@ -22,9 +22,12 @@ export default function ExerciseView() {
   const dayPlan = getWorkoutPlan(profile?.gender)[dayKey]
   const exercise = dayPlan?.exercises.find(ex => ex.id === id)
 
-  const { currentSession, completeSet, uncompleteSet, initSession } = useWorkoutStore()
+  const { currentSession, completeSet, uncompleteSet, initSession, updateExerciseName } = useWorkoutStore()
 
   const [showInstructions, setShowInstructions] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState('')
+  const nameInputRef = useRef(null)
   const [restDuration, setRestDuration] = useState(exercise?.restSeconds || 60)
   const [showCompletion, setShowCompletion] = useState(false)
   const [mediaIndex, setMediaIndex] = useState(0)
@@ -69,6 +72,26 @@ export default function ExerciseView() {
     timer.start(restDuration)
   }
 
+  const displayName = exerciseSession?.name || exercise.name
+
+  const handleStartEditName = () => {
+    setNameValue(displayName)
+    setEditingName(true)
+    setTimeout(() => nameInputRef.current?.focus(), 0)
+  }
+
+  const handleSaveName = () => {
+    const trimmed = nameValue.trim()
+    if (trimmed && trimmed !== displayName) {
+      updateExerciseName(dateKey, id, trimmed)
+    }
+    setEditingName(false)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingName(false)
+  }
+
   const handleUncompleteSet = (setNumber) => {
     uncompleteSet(dateKey, id, setNumber)
     timer.stop()
@@ -95,7 +118,7 @@ export default function ExerciseView() {
       )}
 
       <Header
-        title={exercise.name}
+        title={displayName}
         showBack
       />
 
@@ -220,15 +243,55 @@ export default function ExerciseView() {
             ))}
           </div>
 
-          <h1 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 22,
-            fontWeight: 700,
-            color: 'var(--text-primary)',
-            marginBottom: 6,
-          }}>
-            {exercise.name}
-          </h1>
+          {editingName ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <input
+                ref={nameInputRef}
+                value={nameValue}
+                onChange={e => setNameValue(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSaveName()
+                  if (e.key === 'Escape') handleCancelEdit()
+                }}
+                style={{
+                  flex: 1,
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--accent)',
+                  borderRadius: 8,
+                  padding: '4px 10px',
+                  outline: 'none',
+                }}
+              />
+              <button onClick={handleSaveName} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--accent)' }}>
+                <Check size={20} />
+              </button>
+              <button onClick={handleCancelEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <h1 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 22,
+                fontWeight: 700,
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}>
+                {displayName}
+              </h1>
+              <button
+                onClick={handleStartEditName}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-secondary)', flexShrink: 0 }}
+              >
+                <Pencil size={16} />
+              </button>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
