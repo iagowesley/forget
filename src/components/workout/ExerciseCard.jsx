@@ -60,7 +60,7 @@ export default function ExerciseCard({ exercise, sessionExercise, dayKey, dateKe
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
         }}>
-          {exercise.name}
+          {sessionExercise?.name || exercise.name}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
